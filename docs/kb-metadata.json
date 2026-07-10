@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-07-10T14:13:59.303731",
+  "total_documents": 75,
+  "total_chunks": 80,
+  "folders": {
+    "actas_comites": {
+      "chunks": 30,
+      "tokens": 27909
+    },
+    "cronogramas_previos": {
+      "chunks": 1,
+      "tokens": 638
+    },
+    "ideas_comites": {
+      "chunks": 3,
+      "tokens": 1547
+    },
+    "manuales_comites": {
+      "chunks": 16,
+      "tokens": 13918
+    },
+    "manuales_cumulo": {
+      "chunks": 14,
+      "tokens": 14272
+    },
+    "relatorias_generales": {
+      "chunks": 16,
+      "tokens": 35534
+    }
+  },
+  "date_range": {
+    "earliest": "2023-12-16",
+    "latest": "2025-05-31"
+  }
+}
