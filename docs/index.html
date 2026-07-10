@@ -407,7 +407,7 @@
                     .join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
 
                 // Llamar al backend en Vercel (la API Key está protegida ahí)
-                const response = await fetch('https://juslozanoma-6059.vercel.app/api/search', {
+                const response = await fetch('https://cors-anywhere.herokuapp.com/https://juslozanoma-6059.vercel.app/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
