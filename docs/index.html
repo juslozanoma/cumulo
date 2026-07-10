@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Conocimiento Cúmulo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2a 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #333;
+        }
+
+        h1 {
+            font-size: 40px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #0d7ee6, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .api-key-setup {
+            background: #1a1f2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .api-key-setup label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .api-key-setup a {
+            color: #0d7ee6;
+            text-decoration: none;
+        }
+
+        .api-key-setup a:hover {
+            text-decoration: underline;
+        }
+
+        .api-key-setup input {
+            width: 100%;
+            padding: 12px;
+            background: #0f1419;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .api-key-setup input:focus {
+            outline: none;
+            border-color: #0d7ee6;
+            box-shadow: 0 0 0 3px rgba(13, 126, 230, 0.1);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        #query {
+            flex: 1;
+            min-width: 250px;
+            padding: 14px;
+            background: #1a1f2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        #query:focus {
+            outline: none;
+            border-color: #0d7ee6;
+            box-shadow: 0 0 0 3px rgba(13, 126, 230, 0.1);
+        }
+
+        button {
+            padding: 14px 32px;
+            background: #0d7ee6;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(13, 126, 230, 0.3);
+        }
+
+        button:hover {
+            background: #0a5fb3;
+            box-shadow: 0 6px 12px rgba(13, 126, 230, 0.4);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-item {
+            background: #1a1f2a;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item.source {
+            border-left-color: #8b5cf6;
+        }
+
+        .result-item.answer {
+            background: linear-gradient(135deg, #0f2a1a 0%, #1a2d1e 100%);
+            border-left-color: #10b981;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .result-item.answer strong {
+            color: #10b981;
+            display: block;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .result-item.answer p {
+            color: #e0e0e0;
+        }
+
+        .result-item strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .result-item p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-size: 16px;
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-left: 8px;
+            background: #0d7ee6;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .error {
+            color: #ff6b6b;
+            background: #2a1a1a;
+            padding: 16px;
+            border-radius: 6px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+            font-size: 13px;
+        }
+
+        .stat-card {
+            background: #1a1f2a;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 3px solid #0d7ee6;
+        }
+
+        .stat-card .number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0d7ee6;
+        }
+
+        .stat-card .label {
+            color: #888;
+            font-size: 11px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .no-results strong {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .doc-count {
+            display: inline-block;
+            background: #7c3aed;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Base de Conocimiento</h1>
+            <p class="subtitle">
+                Grupo de Astronomía Cúmulo
+                <br>
+                Busca decisiones, actas, cronogramas y procesos
+            </p>
+        </header>
+
+        <div class="api-key-setup">
+            <label>🔑 API Key de Gemini (obtén una en <a href="https://makersuite.google.com/app/apikey" target="_blank">makersuite.google.com</a>):</label>
+            <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off">
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="query" placeholder="¿Cómo se eligen los coordinadores? ¿Cuáles decisiones fueron anuladas? ¿Próximas reuniones?">
+            <button onclick="search()">🔍 Buscar</button>
+        </div>
+
+        <div id="stats" class="stats"></div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <footer>
+        <p>Base de conocimiento generada automáticamente desde documentos de Cúmulo</p>
+    </footer>
+
+    <script>
+        let knowledgeBase = [];
+        let metadata = {};
+
+        // Cargar la base de conocimiento
+        async function loadKB() {
+            try {
+                const res = await fetch('kb.json');
+                knowledgeBase = await res.json();
+                console.log(`✓ Cargados ${knowledgeBase.length} chunks`);
+
+                // Cargar metadatos si existen
+                try {
+                    const metaRes = await fetch('kb-metadata.json');
+                    metadata = await metaRes.json();
+                    displayStats();
+                } catch (e) {
+                    console.log("Metadatos no disponibles");
+                }
+            } catch (e) {
+                console.error('Error cargando KB:', e);
+                document.getElementById('results').classList.add('show');
+                document.getElementById('results').innerHTML =
+                    '<div class="error">❌ Error cargando base de conocimiento. Verifica que kb.json exista en esta carpeta.</div>';
+            }
+        }
+
+        function displayStats() {
+            if (!metadata.folders) return;
+
+            const statsHtml = Object.entries(metadata.folders)
+                .map(([folder, stats]) => `
+                    <div class="stat-card">
+                        <div class="number">${stats.chunks}</div>
+                        <div class="label">${folder}</div>
+                    </div>
+                `)
+                .join('');
+
+            document.getElementById('stats').innerHTML =
+                `<div class="stat-card" style="border-left-color: #10b981;">
+                    <div class="number">${knowledgeBase.length}</div>
+                    <div class="label">Total Chunks</div>
+                </div>` + statsHtml;
+        }
+
+        // Búsqueda simple: encuentra chunks relevantes
+        function findRelevantChunks(query) {
+            const queryWords = query.toLowerCase()
+                .split(/\s+/)
+                .filter(w => w.length > 2);
+
+            return knowledgeBase
+                .map(chunk => {
+                    let score = 0;
+                    const text = chunk.text.toLowerCase();
+                    const filename = chunk.filename.toLowerCase();
+
+                    queryWords.forEach(word => {
+                        // Búsqueda en texto
+                        const textMatches = (text.match(new RegExp(word, 'g')) || []).length;
+                        score += textMatches * 1;
+
+                        // Búsqueda en filename (peso mayor)
+                        if (filename.includes(word)) {
+                            score += 5;
+                        }
+                    });
+
+                    return { chunk, score };
+                })
+                .filter(x => x.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5)
+                .map(x => x.chunk);
+        }
+
+        // Llamar a Gemini API
+        async function search() {
+            const query = document.getElementById('query').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!query) {
+                alert('Escribe una pregunta');
+                return;
+            }
+            if (!apiKey) {
+                alert('Ingresa tu API Key de Gemini');
+                return;
+            }
+
+            document.getElementById('results').innerHTML = '<div class="loading">Buscando y procesando respuesta</div>';
+            document.getElementById('results').classList.add('show');
+
+            try {
+                // Buscar chunks relevantes
+                const relevantChunks = findRelevantChunks(query);
+
+                if (relevantChunks.length === 0) {
+                    document.getElementById('results').innerHTML =
+                        '<div class="no-results"><strong>No encontré documentos relevantes.</strong><p>Intenta con palabras clave diferentes o más específicas.</p></div>';
+                    return;
+                }
+
+                // Construir contexto para Gemini
+                const context = relevantChunks
+                    .map(c => `[${c.folder} - ${c.date}]\n${c.text}`)
+                    .join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+
+                // Llamar a Gemini
+                const prompt = `Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomía Cúmulo.
+
+DOCUMENTOS RELEVANTES:
+${context}
+
+PREGUNTA DEL USUARIO: ${query}
+
+INSTRUCCIONES:
+1. Responde ÚNICAMENTE basándote en los documentos proporcionados
+2. Si la información no está en los documentos, di claramente "No encontré información sobre esto en los documentos"
+3. Sé preciso sobre fechas, decisiones y personas mencionadas
+4. Si hay decisiones anuladas o actualizadas, menciona ambas versiones
+5. Estructura tu respuesta de forma clara y fácil de leer`;
+
+                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error?.message || 'Error en API de Gemini');
+                }
+
+                const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No pude generar respuesta';
+
+                // Mostrar resultados
+                let html = `
+                    <div class="result-item answer">
+                        <strong>💡 Respuesta:</strong>
+                        <p>${answer.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `;
+
+                html += '<div style="margin-top: 30px; margin-bottom: 16px; color: #888; font-size: 13px; font-weight: 600; text-transform: uppercase;">📄 Documentos usados:</div>';
+
+                relevantChunks.forEach((chunk, i) => {
+                    html += `
+                        <div class="result-item source">
+                            <strong>${i + 1}. ${chunk.filename}</strong>
+                            <p>${chunk.text.substring(0, 250)}${chunk.text.length > 250 ? '...' : ''}</p>
+                            <div class="meta">
+                                <span>📁 ${chunk.folder}</span>
+                                <span>📅 ${chunk.date}</span>
+                                <span>📊 ${chunk.tokens} tokens</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('results').innerHTML = html;
+
+            } catch (error) {
+                document.getElementById('results').innerHTML =
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Cargar cuando la página se carga
+        window.addEventListener('load', loadKB);
+
+        // Enter para buscar
+        document.getElementById('query').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search();
+        });
+    </script>
+</body>
+</html>
