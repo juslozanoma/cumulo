@@ -1,17 +1,11 @@
 export default async function handler(req, res) {
-  // Agregar headers CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Manejar preflight requests
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
@@ -27,12 +21,7 @@ ${context}
 
 PREGUNTA DEL USUARIO: ${query}
 
-INSTRUCCIONES:
-1. Responde ÚNICAMENTE basándote en los documentos proporcionados
-2. Si la información no está en los documentos, di claramente "No encontré información sobre esto en los documentos"
-3. Sé preciso sobre fechas, decisiones y personas mencionadas
-4. Si hay decisiones anuladas o actualizadas, menciona ambas versiones
-5. Estructura tu respuesta de forma clara y fácil de leer`;
+Responde ÚNICAMENTE basándote en los documentos.`;
 
   try {
     const response = await fetch(
@@ -53,8 +42,8 @@ INSTRUCCIONES:
       return res.status(response.status).json(data);
     }
 
-    res.status(200).json(data);
+    return res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 }
