@@ -1051,15 +1051,17 @@
                                             voiceName: "Puck"
                                         }
                                     }
-                                },
-                                // Sin esto, el servidor nunca envía inputTranscription/outputTranscription
-                                // (era la causa principal de que el modo Live no mostrara nada en el chat)
-                                inputAudioTranscription: {},
-                                outputAudioTranscription: {}
+                                }
                             },
                             systemInstruction: {
                                 parts: [{ text: 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve y concisa.' }]
-                            }
+                            },
+                            // inputAudioTranscription / outputAudioTranscription van al mismo nivel que
+                            // generationConfig dentro de "setup" (NO anidados dentro de generationConfig).
+                            // Metidos ahí adentro, el servidor los rechaza y cierra la conexión de inmediato
+                            // apenas se envía el setup — eso era lo que cortaba el modo Live al instante.
+                            inputAudioTranscription: {},
+                            outputAudioTranscription: {}
                         }
                     }));
                 };
