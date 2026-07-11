@@ -550,6 +550,7 @@
         }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <div class="container">
@@ -571,14 +572,14 @@
 
         <div class="auth-loading" id="authLoading">
             <div class="spinner"></div>
-            Realizando autenticación...
+            Realizando autenticacion...
         </div>
 
         <div class="api-success" id="apiSuccess">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
-            Autenticación correcta
+            Autenticacion correcta
         </div>
 
         <div class="api-error" id="apiError">
@@ -591,7 +592,7 @@
         </div>
 
         <div class="search-box" id="searchBox">
-            <input type="text" id="query" placeholder="Escribe tu pregunta aquí" disabled>
+            <input type="text" id="query" placeholder="Escribe tu pregunta aqui" disabled>
             <button id="searchBtn" onclick="handleSubmit()" aria-label="Buscar" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"></circle>
@@ -616,6 +617,9 @@
     </div>
 
     <script>
+        // ===================================================================
+        // CONFIGURACION Y ESTADO GLOBAL
+        // ===================================================================
         let knowledgeBase = [];
         let isAuthenticated = false;
         let isLiveMode = false;
@@ -623,12 +627,12 @@
         let isProcessing = false;
         let chatModeActive = false;
 
-        // ─── Estado del modo Live ───
+        // ─── Estado del modo Live (WebSocket a Gemini Live) ───
         let liveWs = null;
-        let liveAudioContext = null;      // captura de micrófono
+        let liveAudioContext = null;
         let liveMediaStream = null;
         let liveAudioWorklet = null;
-        let liveOutputCtx = null;         // reproducción de audio del modelo
+        let liveOutputCtx = null;
         let liveNextStartTime = 0;
         let liveActiveSources = [];
         let liveAnswerId = null;
@@ -636,76 +640,88 @@
         let liveOutputBuffer = '';
         let liveListeningBubbleId = null;
 
+        // KB en formato plano para busqueda rapida (se carga al inicio)
+        let kbDocuments = [];
+
         const GEMINI_CHAT_MODEL = 'gemini-3.1-flash-lite';
         const GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
         const COLORS = ['#10b981', '#0d7ee6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
+        // ===================================================================
+        // CARGA DE BASE DE CONOCIMIENTO
+        // ===================================================================
         async function loadKB() {
-    try {
-        const res = await fetch('kb.json');
-        const documents = await res.json();
-        // Nuevo formato: aplanar chunks de documentos anidados
-        knowledgeBase = documents.flatMap(doc => 
-            doc.chunks.map(chunk => ({
-                ...chunk,
-                _doc: doc  // referencia al documento padre
-            }))
-        );
-        console.log('Cargados ' + documents.length + ' documentos, ' + knowledgeBase.length + ' chunks');
-    } catch (e) {
-        console.error('Error cargando KB:', e);
-    }
-}
-
-function findRelevantChunks(query) {
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    if (queryWords.length === 0) return [];
-
-    return knowledgeBase
-        .map(chunk => {
-            let score = 0;
-            const text = (chunk.text || '').toLowerCase();
-            const doc = chunk._doc;
-            const filename = (doc.file?.name || '').toLowerCase();
-            const section = (chunk.section || '').toLowerCase();
-            const docType = (doc.document_type || '').toLowerCase();
-            const committee = (doc.committee || '').toLowerCase();
-
-            queryWords.forEach(word => {
-                const matches = (text.match(new RegExp(word, 'g')) || []).length;
-                score += matches;
-                if (filename.includes(word)) score += 5;
-                if (section.includes(word)) score += 3;
-                if (docType.includes(word)) score += 4;
-                if (committee.includes(word)) score += 4;
-                if ((doc.keywords || []).some(kw => kw.toLowerCase().includes(word))) score += 2;
-            });
-
-            const dateStr = doc.dates?.start;
-            if (dateStr) {
-                const dateVal = new Date(dateStr).getTime();
-                if (!isNaN(dateVal)) {
-                    const now = Date.now();
-                    const daysDiff = (now - dateVal) / (1000 * 60 * 60 * 24);
-                    if (daysDiff < 365) score += 3;
-                    if (daysDiff < 90) score += 5;
-                    if (daysDiff < 30) score += 8;
-                }
+            try {
+                const res = await fetch('kb.json');
+                kbDocuments = await res.json();
+                // Aplanar chunks para busqueda
+                knowledgeBase = kbDocuments.flatMap(doc =>
+                    doc.chunks.map(chunk => ({
+                        ...chunk,
+                        _doc: doc
+                    }))
+                );
+                console.log('Cargados ' + kbDocuments.length + ' documentos, ' + knowledgeBase.length + ' chunks');
+            } catch (e) {
+                console.error('Error cargando KB:', e);
             }
+        }
 
-            return { chunk, score };
-        })
-        .filter(x => x.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-        .map(x => x.chunk);
-}
+        // ===================================================================
+        // BUSQUEDA DE CHUNKS RELEVANTES
+        // ===================================================================
+        function findRelevantChunks(query) {
+            const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            if (queryWords.length === 0) return [];
 
+            return knowledgeBase
+                .map(chunk => {
+                    let score = 0;
+                    const text = (chunk.text || '').toLowerCase();
+                    const doc = chunk._doc;
+                    const filename = (doc.file?.name || '').toLowerCase();
+                    const section = (chunk.section || '').toLowerCase();
+                    const docType = (doc.document_type || '').toLowerCase();
+                    const committee = (doc.committee || '').toLowerCase();
+
+                    queryWords.forEach(word => {
+                        const matches = (text.match(new RegExp(word, 'g')) || []).length;
+                        score += matches;
+                        if (filename.includes(word)) score += 5;
+                        if (section.includes(word)) score += 3;
+                        if (docType.includes(word)) score += 4;
+                        if (committee.includes(word)) score += 4;
+                        if ((doc.keywords || []).some(kw => kw.toLowerCase().includes(word))) score += 2;
+                    });
+
+                    const dateStr = doc.dates?.start;
+                    if (dateStr) {
+                        const dateVal = new Date(dateStr).getTime();
+                        if (!isNaN(dateVal)) {
+                            const now = Date.now();
+                            const daysDiff = (now - dateVal) / (1000 * 60 * 60 * 24);
+                            if (daysDiff < 365) score += 3;
+                            if (daysDiff < 90) score += 5;
+                            if (daysDiff < 30) score += 8;
+                        }
+                    }
+
+                    return { chunk, score };
+                })
+                .filter(x => x.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5)
+                .map(x => x.chunk);
+        }
+
+        // ===================================================================
+        // EXTRACCION DE SNIPPETS
+        // ===================================================================
         function extractRelevantSnippet(chunkText, queryWords) {
             const text = chunkText.toLowerCase();
             let bestStart = 0;
             let bestScore = -1;
-            const windowSize = 80; // ~50 words
+            const windowSize = 80;
 
             for (let i = 0; i < text.length - windowSize; i += 20) {
                 let score = 0;
@@ -720,7 +736,6 @@ function findRelevantChunks(query) {
             }
 
             let start = bestStart;
-            // Expand to word boundaries
             while (start > 0 && chunkText[start - 1] !== ' ' && chunkText[start - 1] !== '\n') start--;
             let end = Math.min(start + windowSize, chunkText.length);
             while (end < chunkText.length && chunkText[end] !== ' ' && chunkText[end] !== '\n') end++;
@@ -731,9 +746,32 @@ function findRelevantChunks(query) {
             return snippet;
         }
 
+        // ===================================================================
+        // CONSTRUIR CONTEXTO PARA PROMPT
+        // ===================================================================
+        function buildContext(chunks) {
+            if (!chunks || chunks.length === 0) return 'No se encontraron documentos relevantes.';
+            return chunks.map(chunk => {
+                const doc = chunk._doc;
+                const parts = [];
+                parts.push('📄 ' + doc.document_id + ' | ' + doc.document_type.toUpperCase() + ' | ' + doc.committee);
+                parts.push('📅 Fecha: ' + (doc.dates?.start || 'sin fecha') + ' | Estado: ' + doc.status);
+                if (doc.participants?.length > 0) {
+                    parts.push('👥 Participantes: ' + doc.participants.map(p => p.name + ' (' + p.role + ')').join(', '));
+                }
+                parts.push('📝 Seccion: ' + (chunk.section || 'contenido general'));
+                parts.push('');
+                parts.push(chunk.text);
+                return parts.join('\n');
+            }).join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+        }
+
+        // ===================================================================
+        // UTILIDADES
+        // ===================================================================
         async function verifyApiKey(apiKey) {
             try {
-                const testPrompt = 'Responde únicamente "OK".';
+                const testPrompt = 'Responde unicamente "OK".';
                 const response = await fetch(
                     'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_CHAT_MODEL + ':generateContent?key=' + apiKey,
                     {
@@ -782,7 +820,9 @@ function findRelevantChunks(query) {
             document.getElementById('btnAuth').disabled = disabled;
         }
 
-        // ─── Transición al modo chat: mueve el buscador al final y oculta el aviso de autenticación ───
+        // ===================================================================
+        // UI - MODO CHAT
+        // ===================================================================
         function ensureChatMode() {
             if (chatModeActive) return;
             chatModeActive = true;
@@ -839,10 +879,10 @@ function findRelevantChunks(query) {
                 const color = COLORS[i % COLORS.length];
                 const snippet = extractRelevantSnippet(chunk.text, queryWords);
                 const doc = chunk._doc;
-html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
-    '<div class="chunk-header"><span>' + escapeHtml(doc.file?.name || 'desconocido') + '</span><span>' + escapeHtml(doc.committee || 'general') + '</span><span>' + escapeHtml(doc.dates?.start || 'sin fecha') + '</span></div>' +
-    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
-    '</div>';
+                html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
+                    '<div class="chunk-header"><span>' + escapeHtml(doc.file?.name || 'desconocido') + '</span><span>' + escapeHtml(doc.committee || 'general') + '</span><span>' + escapeHtml(doc.dates?.start || 'sin fecha') + '</span></div>' +
+                    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
+                    '</div>';
             });
 
             html += '</div>';
@@ -915,17 +955,20 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
             }
         }
 
+        // ===================================================================
+        // MODO CHAT - BUSQUEDA HTTP
+        // ===================================================================
         async function search() {
             const query = document.getElementById('query').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
 
             if (!isAuthenticated) {
-                addMessageToChat('', 'Acceso denegado. Este documento contiene información confidencial. Solicita el código e intenta nuevamente.', false, []);
+                addMessageToChat('', 'Acceso denegado. Este documento contiene informacion confidencial. Solicita el codigo e intenta nuevamente.', false, []);
                 return;
             }
 
             if (isAuthenticated && !query) {
-                addMessageToChat('', 'Este buscador te permite consultar información sobre decisiones, actas y procesos del grupo de astronomía Cúmulo. Puedes preguntar sobre reuniones, acuerdos, eventos, proyectos y cualquier documento relevante de la organización.', false, []);
+                addMessageToChat('', 'Este buscador te permite consultar informacion sobre decisiones, actas y procesos del grupo de astronomia Cumulo. Puedes preguntar sobre reuniones, acuerdos, eventos, proyectos y cualquier documento relevante de la organizacion.', false, []);
                 return;
             }
 
@@ -940,7 +983,7 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
 
                 if (relevantChunks.length === 0) {
                     document.getElementById('loadingBox').classList.remove('show');
-                    addMessageToChat(query, 'No encontré documentos relevantes. Intenta con otras palabras clave.', false, []);
+                    addMessageToChat(query, 'No encontre documentos relevantes. Intenta con otras palabras clave.', false, []);
                     isProcessing = false;
                     setInputsDisabled(false);
                     document.getElementById('query').value = '';
@@ -948,21 +991,9 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
                     return;
                 }
 
-                const context = relevantChunks.map(chunk => {
-    const doc = chunk._doc;
-    const parts = [];
-    parts.push('📄 ' + doc.document_id + ' | ' + doc.document_type.toUpperCase() + ' | ' + doc.committee);
-    parts.push('📅 Fecha: ' + (doc.dates?.start || 'sin fecha') + ' | Estado: ' + doc.status);
-    if (doc.participants?.length > 0) {
-        parts.push('👥 Participantes: ' + doc.participants.map(p => p.name + ' (' + p.role + ')').join(', '));
-    }
-    parts.push('📝 Sección: ' + (chunk.section || 'contenido general'));
-    parts.push('');
-    parts.push(chunk.text);
-    return parts.join('\n');
-}).join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+                const context = buildContext(relevantChunks);
 
-                const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un análisis conciso basado en la información. Prioriza la información más reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un análisis breve (menos de 50 palabras) basado ÚNICAMENTE en los documentos\n2. Prioriza la información más reciente\n3. Si la información no está, di "No encontré información"';
+                const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un analisis conciso basado en la informacion. Prioriza la informacion mas reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un analisis breve (menos de 50 palabras) basado UNICAMENTE en los documentos\n2. Prioriza la informacion mas reciente\n3. Si la informacion no esta, di "No encontre informacion"';
 
                 const response = await fetch(
                     'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_CHAT_MODEL + ':generateContent?key=' + apiKey,
@@ -1000,7 +1031,9 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
             document.getElementById('query').focus();
         }
 
-        // ─── LIVE MODE ───
+        // ===================================================================
+        // MODO LIVE - WEBSOCKET A GEMINI LIVE CON KB EN SYSTEM INSTRUCTION
+        // ===================================================================
 
         function updateLiveButtonUI(active) {
             const btnLive = document.getElementById('btnLive');
@@ -1049,241 +1082,346 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
             }
         }
 
+        // ─── Construir system instruction con KB ───
+        function buildLiveSystemInstruction() {
+            // Tomar los 3 documentos mas recientes como contexto base
+            const recentDocs = [...kbDocuments]
+                .filter(d => d.dates?.start)
+                .sort((a, b) => new Date(b.dates.start) - new Date(a.dates.start))
+                .slice(0, 3);
+
+            let kbContext = '';
+            if (recentDocs.length > 0) {
+                kbContext = '\n\nDOCUMENTOS DE REFERENCIA (Cumulo):\n' +
+                    recentDocs.map(doc => {
+                        const parts = [];
+                        parts.push('[' + doc.document_id + ' | ' + doc.document_type + ' | ' + doc.committee + ']');
+                        parts.push('Fecha: ' + (doc.dates?.start || 'N/A') + ' | Estado: ' + doc.status);
+                        parts.push(doc.summary || '');
+                        return parts.join('\n');
+                    }).join('\n\n---\n\n');
+            }
+
+            return 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve, clara y concisa como en una conversacion de voz. Si no sabes algo, di "No tengo esa informacion".\n' +
+                kbContext +
+                '\n\nINSTRUCCIONES:\n1. Responde en maximo 30 palabras\n2. Usa un tono conversacional y amigable\n3. Si preguntan por algo especifico de los documentos, usa la informacion proporcionada\n4. Si no estas seguro, di "No tengo esa informacion"';
+        }
+
         async function startLiveMode() {
-    const apiKey = document.getElementById('apiKey').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
 
-    isLiveMode = true;
-    updateLiveButtonUI(true);
-    liveInputBuffer = '';
-    liveOutputBuffer = '';
-    liveAnswerId = null;
+            isLiveMode = true;
+            updateLiveButtonUI(true);
+            liveInputBuffer = '';
+            liveOutputBuffer = '';
+            liveAnswerId = null;
 
-    addSystemMessage('Modo Live activo — Habla y te escucho');
+            addSystemMessage('Modo Live activo — Puedes hablar');
 
-    // Usar Web Speech API para transcripción local (gratis, sin API key)
-    // Fallback: usar Gemini STT si no está disponible
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        startBrowserSpeechRecognition();
-    } else {
-        // Fallback: usar Gemini para transcribir (más costoso)
-        startGeminiSpeechRecognition(apiKey);
-    }
-}
+            // Conectar WebSocket a Gemini Live
+            const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
+
+            try {
+                liveWs = new WebSocket(wsUrl);
+
+                liveWs.onopen = () => {
+                    console.log('Live WebSocket connected');
+                    liveWs.send(JSON.stringify({
+                        setup: {
+                            model: 'models/' + GEMINI_LIVE_MODEL,
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: {
+                                            voiceName: "Puck"
+                                        }
+                                    }
+                                }
+                            },
+                            systemInstruction: {
+                                parts: [{ text: buildLiveSystemInstruction() }]
+                            },
+                            inputAudioTranscription: {},
+                            outputAudioTranscription: {}
+                        }
+                    }));
+                };
+
+                liveWs.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    console.log('Live response:', response);
+
+                    if (response.setupComplete) {
+                        console.log('Live setup complete');
+                        startMicrophoneCapture();
+                        showListeningBubble();
+                    }
+
+                    if (response.serverContent) {
+                        const sc = response.serverContent;
+                        const chatArea = document.getElementById('chatArea');
+
+                        // Interrupcion
+                        if (sc.interrupted) {
+                            stopAllLiveAudio();
+                        }
+
+                        // Transcripcion de entrada (usuario hablando)
+                        if (sc.inputTranscription && typeof sc.inputTranscription.text === 'string') {
+                            liveInputBuffer += sc.inputTranscription.text;
+                        }
+
+                        // Transcripcion de salida (modelo respondiendo)
+                        if (sc.outputTranscription && typeof sc.outputTranscription.text === 'string') {
+                            if (!liveAnswerId) {
+                                removeListeningBubble();
+                                liveAnswerId = 'live-' + Date.now();
+                                const qText = liveInputBuffer.trim() || '(entrada de voz)';
+                                const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(qText) + '</div></div>';
+                                const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text"></span></div></div>';
+                                chatArea.insertAdjacentHTML('beforeend', qHtml + aHtml);
+                                liveOutputBuffer = '';
+                            }
+                            liveOutputBuffer += sc.outputTranscription.text;
+                            const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
+                            if (ansTextEl) ansTextEl.innerHTML = formatMarkdown(liveOutputBuffer);
+                            chatArea.scrollTop = chatArea.scrollHeight;
+                        }
+
+                        // Turno completo
+                        if (sc.turnComplete) {
+                            if (liveAnswerId) {
+                                qaHistory.push({
+                                    id: liveAnswerId,
+                                    question: liveInputBuffer.trim(),
+                                    answer: liveOutputBuffer.trim(),
+                                    chunks: [],
+                                    isLive: true,
+                                    timestamp: new Date()
+                                });
+                            }
+                            liveAnswerId = null;
+                            liveInputBuffer = '';
+                            liveOutputBuffer = '';
+                            if (isLiveMode) showListeningBubble();
+                        }
+
+                        // Audio de salida
+                        if (sc.modelTurn && sc.modelTurn.parts) {
+                            for (const part of sc.modelTurn.parts) {
+                                if (part.inlineData && part.inlineData.data) {
+                                    playAudioChunk(part.inlineData.data);
+                                }
+                            }
+                        }
+                    }
+                };
+
+                liveWs.onerror = (error) => {
+                    console.error('Live WebSocket error:', error);
+                    addSystemMessage('Error de conexion en modo Live');
+                    stopLiveMode();
+                };
+
+                liveWs.onclose = () => {
+                    console.log('Live WebSocket closed');
+                    if (isLiveMode) stopLiveMode();
+                };
+
+            } catch (e) {
+                console.error('Error starting live mode:', e);
+                stopLiveMode();
+            }
+        }
 
         function stopLiveMode() {
-    const wasLive = isLiveMode;
-    isLiveMode = false;
-    updateLiveButtonUI(false);
-    removeListeningBubble();
+            const wasLive = isLiveMode;
+            isLiveMode = false;
+            updateLiveButtonUI(false);
+            removeListeningBubble();
 
-    // Detener reconocimiento de voz
-    if (speechRecognition) {
-        speechRecognition.stop();
-        speechRecognition = null;
-    }
+            if (liveWs) {
+                liveWs.close();
+                liveWs = null;
+            }
 
-    // Detener micrófono
-    if (liveMediaStream) {
-        liveMediaStream.getTracks().forEach(t => t.stop());
-        liveMediaStream = null;
-    }
+            if (liveMediaStream) {
+                liveMediaStream.getTracks().forEach(t => t.stop());
+                liveMediaStream = null;
+            }
 
-    // Detener audio context
-    if (liveAudioContext) {
-        liveAudioContext.close();
-        liveAudioContext = null;
-    }
+            if (liveAudioWorklet) {
+                liveAudioWorklet.disconnect();
+                liveAudioWorklet = null;
+            }
 
-    // Detener TTS
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-    }
+            if (liveAudioContext) {
+                liveAudioContext.close();
+                liveAudioContext = null;
+            }
 
-    liveAnswerId = null;
-    liveInputBuffer = '';
-    liveOutputBuffer = '';
+            stopAllLiveAudio();
+            if (liveOutputCtx) {
+                liveOutputCtx.close();
+                liveOutputCtx = null;
+            }
 
-    if (wasLive) {
-        addSystemMessage('Finalizó Modo Live - Escribe para continuar.');
-    }
-}
+            liveAnswerId = null;
+            liveInputBuffer = '';
+            liveOutputBuffer = '';
 
-let speechRecognition = null;
-
-function startBrowserSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    speechRecognition = new SpeechRecognition();
-    speechRecognition.lang = 'es-ES';
-    speechRecognition.continuous = true;
-    speechRecognition.interimResults = true;
-
-    let finalTranscript = '';
-    let silenceTimer = null;
-
-    speechRecognition.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-                finalTranscript += transcript + ' ';
-            } else {
-                interim += transcript;
+            if (wasLive) {
+                addSystemMessage('Finalizo Modo Live - Escribe para continuar.');
             }
         }
 
-        // Mostrar lo que se está escuchando
-        if (interim || finalTranscript) {
-            showListeningBubble();
-            const bubble = document.querySelector('#' + liveListeningBubbleId + ' .msg-bubble');
-            if (bubble) {
-                bubble.innerHTML = '<span class="live-badge">Live</span>' + escapeHtml(finalTranscript + interim);
+        async function startMicrophoneCapture() {
+            try {
+                liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                liveAudioContext = new AudioContext({ sampleRate: 16000 });
+                const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
+
+                const bufferSize = 4096;
+                const processor = liveAudioContext.createScriptProcessor(bufferSize, 1, 1);
+
+                processor.onaudioprocess = (e) => {
+                    if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const pcmData = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                    }
+
+                    const base64 = arrayBufferToBase64(pcmData.buffer);
+                    liveWs.send(JSON.stringify({
+                        realtimeInput: {
+                            audio: {
+                                data: base64,
+                                mimeType: 'audio/pcm;rate=16000'
+                            }
+                        }
+                    }));
+                };
+
+                source.connect(processor);
+                processor.connect(liveAudioContext.destination);
+                liveAudioWorklet = processor;
+
+            } catch (e) {
+                console.error('Error accessing microphone:', e);
+                addSystemMessage('No se pudo acceder al microfono. Verifica los permisos.');
             }
         }
 
-        // Detectar pausa para procesar
-        clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(() => {
-            if (finalTranscript.trim()) {
-                processLiveQuery(finalTranscript.trim());
-                finalTranscript = '';
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
             }
-        }, 1500); // 1.5 segundos de silencio = procesar
-    };
-
-    speechRecognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-            addSystemMessage('Permiso de micrófono denegado');
-            stopLiveMode();
+            return btoa(binary);
         }
-    };
 
-    speechRecognition.onend = () => {
-        if (isLiveMode) {
-            speechRecognition.start(); // Reiniciar si sigue en modo live
-        }
-    };
-
-    speechRecognition.start();
-}
-        
-        // ─── Reproducción de audio del modelo ───
-        // El audio llega como PCM crudo (sin cabecera), por lo que NO se puede usar
-        // decodeAudioData (eso esperaba un archivo codificado tipo WAV/MP3 y fallaba
-        // silenciosamente). Aquí se decodifica manualmente y se agenda en cola sobre
-        // un único AudioContext persistente para que no se corte ni se solape.
-
-        // Enviar texto durante el modo Live (sin hablar)
-
-        async function processLiveQuery(queryText) {
-    removeListeningBubble();
-
-    // 1. Buscar chunks relevantes (igual que en modo chat)
-    const relevantChunks = findRelevantChunks(queryText);
-    
-    // 2. Armar contexto enriquecido (igual que en modo chat)
-    let context = '';
-    if (relevantChunks.length > 0) {
-        context = relevantChunks.map(chunk => {
-            const doc = chunk._doc;
-            const parts = [];
-            parts.push('📄 ' + doc.document_id + ' | ' + doc.document_type.toUpperCase() + ' | ' + doc.committee);
-            parts.push('📅 Fecha: ' + (doc.dates?.start || 'sin fecha') + ' | Estado: ' + doc.status);
-            if (doc.participants?.length > 0) {
-                parts.push('👥 Participantes: ' + doc.participants.map(p => p.name + ' (' + p.role + ')').join(', '));
+        function ensureOutputContext() {
+            if (!liveOutputCtx) {
+                liveOutputCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                liveNextStartTime = liveOutputCtx.currentTime;
             }
-            parts.push('📝 Sección: ' + (chunk.section || 'contenido general'));
-            parts.push('');
-            parts.push(chunk.text);
-            return parts.join('\n');
-        }).join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
-    }
-
-    // 3. Mostrar pregunta del usuario
-    liveAnswerId = 'live-' + Date.now();
-    const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(queryText) + '</div></div>';
-    const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text">Pensando...</span></div></div>';
-    document.getElementById('chatArea').insertAdjacentHTML('beforeend', qHtml + aHtml);
-    document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
-
-    // 4. Consultar backend
-    try {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const response = await fetch('/api/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query: queryText,
-                context: context,
-                mode: 'live'
-            })
-        });
-
-        const data = await response.json();
-        let answer = 'No pude generar respuesta';
-
-        if (response.ok && data.candidates && data.candidates[0]) {
-            answer = data.candidates[0].content.parts[0].text;
-        } else if (data.error) {
-            answer = 'Error: ' + data.error.message;
+            return liveOutputCtx;
         }
 
-        // 5. Mostrar respuesta
-        const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
-        if (ansTextEl) {
-            ansTextEl.innerHTML = formatMarkdown(answer);
+        function playAudioChunk(base64Data) {
+            try {
+                const ctx = ensureOutputContext();
+                const binaryStr = atob(base64Data);
+                const len = binaryStr.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+                const view = new DataView(bytes.buffer);
+                const sampleCount = Math.floor(len / 2);
+                if (sampleCount === 0) return;
+
+                const audioBuffer = ctx.createBuffer(1, sampleCount, 24000);
+                const channelData = audioBuffer.getChannelData(0);
+                for (let i = 0; i < sampleCount; i++) {
+                    channelData[i] = view.getInt16(i * 2, true) / 32768;
+                }
+
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+                if (liveNextStartTime < now) liveNextStartTime = now;
+                source.start(liveNextStartTime);
+                liveNextStartTime += audioBuffer.duration;
+
+                liveActiveSources.push(source);
+                source.onended = () => {
+                    const idx = liveActiveSources.indexOf(source);
+                    if (idx !== -1) liveActiveSources.splice(idx, 1);
+                };
+            } catch (e) {
+                console.error('Error reproduciendo audio:', e);
+            }
         }
 
-        // 6. Guardar en historial
-        qaHistory.push({
-            id: liveAnswerId,
-            question: queryText,
-            answer: answer,
-            chunks: relevantChunks,
-            isLive: true,
-            timestamp: new Date()
-        });
-
-        // 7. Leer en voz alta (Text-to-Speech)
-        speakText(answer);
-
-    } catch (error) {
-        const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
-        if (ansTextEl) {
-            ansTextEl.textContent = 'Error de conexión';
+        function stopAllLiveAudio() {
+            liveActiveSources.forEach(s => {
+                try { s.stop(); } catch (e) { /* ya pudo haber terminado */ }
+            });
+            liveActiveSources = [];
+            if (liveOutputCtx) liveNextStartTime = liveOutputCtx.currentTime;
         }
-    }
 
-    liveAnswerId = null;
-    if (isLiveMode) showListeningBubble();
-}
+        async function sendLiveText(text) {
+            if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+            removeListeningBubble();
+            liveInputBuffer = text;
+            liveWs.send(JSON.stringify({
+                realtimeInput: {
+                    text: text
+                }
+            }));
+        }
 
-        function speakText(text) {
-    if (!window.speechSynthesis) return;
-    
-    // Limpiar markdown para lectura
-    const cleanText = text
-        .replace(/\*\*(.+?)\*\*/g, '$1')
-        .replace(/\*(.+?)\*/g, '$1')
-        .replace(/#{1,3}\s+(.+)/g, '$1.')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'es-ES';
-    utterance.rate = 1.1;
-    utterance.pitch = 1;
-
-    // Cancelar cualquier lectura anterior
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-}
-
+        // ===================================================================
+        // INICIALIZACION
+        // ===================================================================
         window.addEventListener('load', loadKB);
         document.getElementById('query').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 handleSubmit();
             }
         });
+
+// ===================================================================
+// PANTALLA COMPLETA EN DISPOSITIVOS TACTILES
+// ===================================================================
+(function initFullscreen() {
+    // Detectar si es dispositivo tactil
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    if (!isTouchDevice) return; // Solo en tactiles
+
+    // Al primer toque en cualquier parte, pedir pantalla completa
+    function requestFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(() => {});
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+    }
+
+    // Escuchar el primer toque
+    document.addEventListener('touchstart', requestFullscreen, { once: true });
+})();
     </script>
 </body>
 </html>
