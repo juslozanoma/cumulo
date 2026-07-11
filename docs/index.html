@@ -1284,47 +1284,114 @@
 
         async function startMicrophoneCapture() {
     try {
-        // En móvil, AudioContext debe resumirse después de gesto del usuario
-        if (liveAudioContext && liveAudioContext.state === 'suspended') {
-            await liveAudioContext.resume();
-        }
+        console.log('[LIVE] Solicitando micrófono...');
         
-        liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                liveAudioContext = new AudioContext({ sampleRate: 16000 });
-                const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
+        liveMediaStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 16000
+            } 
+        });
+        console.log('[LIVE] Micrófono obtenido');
 
-                const bufferSize = 4096;
-                const processor = liveAudioContext.createScriptProcessor(bufferSize, 1, 1);
-
-                processor.onaudioprocess = (e) => {
-                    if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
-
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    const pcmData = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                    }
-
-                    const base64 = arrayBufferToBase64(pcmData.buffer);
-                    liveWs.send(JSON.stringify({
-                        realtimeInput: {
-                            audio: {
-                                data: base64,
-                                mimeType: 'audio/pcm;rate=16000'
-                            }
-                        }
-                    }));
-                };
-
-                source.connect(processor);
-                processor.connect(liveAudioContext.destination);
-                liveAudioWorklet = processor;
-
-            } catch (e) {
-                console.error('Error accessing microphone:', e);
-                addSystemMessage('No se pudo acceder al microfono. Verifica los permisos.');
-            }
+        liveAudioContext = new AudioContext({ sampleRate: 16000 });
+        
+        // En móvil, el AudioContext empieza suspendido
+        if (liveAudioContext.state === 'suspended') {
+            await liveAudioContext.resume();
+            console.log('[LIVE] AudioContext resumido');
         }
+
+        const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
+
+        // Intentar usar AudioWorklet (moderno), fallback a ScriptProcessor
+        if (liveAudioContext.audioWorklet) {
+            console.log('[LIVE] Usando AudioWorklet');
+            
+            // Crear el worklet inline como blob
+            const workletCode = `
+                class PCMEncoder extends AudioWorkletProcessor {
+                    process(inputs, outputs, parameters) {
+                        const input = inputs[0];
+                        if (input.length > 0) {
+                            const channelData = input[0];
+                            const int16Data = new Int16Array(channelData.length);
+                            for (let i = 0; i < channelData.length; i++) {
+                                int16Data[i] = Math.max(-1, Math.min(1, channelData[i])) * 0x7FFF;
+                            }
+                            this.port.postMessage(int16Data.buffer, [int16Data.buffer]);
+                        }
+                        return true;
+                    }
+                }
+                registerProcessor('pcm-encoder', PCMEncoder);
+            `;
+            
+            const blob = new Blob([workletCode], { type: 'application/javascript' });
+            const workletUrl = URL.createObjectURL(blob);
+            
+            await liveAudioContext.audioWorklet.addModule(workletUrl);
+            
+            const workletNode = new AudioWorkletNode(liveAudioContext, 'pcm-encoder');
+            workletNode.port.onmessage = (e) => {
+                if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+                
+                const base64 = arrayBufferToBase64(e.data);
+                liveWs.send(JSON.stringify({
+                    realtimeInput: {
+                        audio: {
+                            data: base64,
+                            mimeType: 'audio/pcm;rate=16000'
+                        }
+                    }
+                }));
+            };
+            
+            source.connect(workletNode);
+            liveAudioWorklet = workletNode;
+            
+        } else {
+            // Fallback a ScriptProcessorNode (deprecated pero funcional)
+            console.log('[LIVE] Fallback a ScriptProcessorNode');
+            
+            const bufferSize = 4096;
+            const processor = liveAudioContext.createScriptProcessor(bufferSize, 1, 1);
+
+            processor.onaudioprocess = (e) => {
+                if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+
+                const inputData = e.inputBuffer.getChannelData(0);
+                const pcmData = new Int16Array(inputData.length);
+                for (let i = 0; i < inputData.length; i++) {
+                    pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                }
+
+                const base64 = arrayBufferToBase64(pcmData.buffer);
+                liveWs.send(JSON.stringify({
+                    realtimeInput: {
+                        audio: {
+                            data: base64,
+                            mimeType: 'audio/pcm;rate=16000'
+                        }
+                    }
+                }));
+            };
+
+            source.connect(processor);
+            processor.connect(liveAudioContext.destination);
+            liveAudioWorklet = processor;
+        }
+
+        console.log('[LIVE] Captura de audio iniciada');
+
+    } catch (e) {
+        console.error('[LIVE] Error accediendo al micrófono:', e);
+        addSystemMessage('No se pudo acceder al micrófono: ' + e.message);
+        stopLiveMode();
+    }
+}
 
         function arrayBufferToBase64(buffer) {
             const bytes = new Uint8Array(buffer);
