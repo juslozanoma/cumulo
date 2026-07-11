@@ -1148,8 +1148,14 @@
                     }));
                 };
 
-                liveWs.onmessage = (event) => {
-                    const response = JSON.parse(event.data);
+                liveWs.onmessage = async (event) => {
+    let response;
+    if (event.data instanceof Blob) {
+        const text = await event.data.text();
+        response = JSON.parse(text);
+    } else {
+        response = JSON.parse(event.data);
+    }
                     console.log('Live response:', response);
 
                     if (response.setupComplete) {
@@ -1277,8 +1283,13 @@
         }
 
         async function startMicrophoneCapture() {
-            try {
-                liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    try {
+        // En móvil, AudioContext debe resumirse después de gesto del usuario
+        if (liveAudioContext && liveAudioContext.state === 'suspended') {
+            await liveAudioContext.resume();
+        }
+        
+        liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 liveAudioContext = new AudioContext({ sampleRate: 16000 });
                 const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
 
