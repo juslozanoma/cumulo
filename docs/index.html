@@ -21,8 +21,8 @@
             background: #0a0e17;
             color: #e0e0e0;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
             padding: 20px;
             overflow: hidden;
         }
@@ -33,8 +33,8 @@
             text-align: center;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            max-height: 900px;
+            height: calc(100vh - 40px);
+            max-height: 860px;
             overflow: hidden;
         }
 
@@ -349,6 +349,28 @@
             color: #0d7ee6;
         }
 
+        .doc-download {
+            margin-top: 10px;
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #0d7ee6;
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-download:hover {
+            background: #0a6bc4;
+        }
+
         .detail-panel {
             display: none;
             margin-top: 10px;
@@ -369,51 +391,50 @@
             letter-spacing: 0.5px;
         }
 
-        .detail-chunk {
+        .source-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .source-item {
             background: #161b26;
             padding: 10px 12px;
             border-radius: 6px;
             margin-bottom: 8px;
             border-left: 3px solid;
             font-size: 12px;
-            color: #999;
-            line-height: 1.5;
-        }
-
-        .detail-chunk .chunk-header {
-            color: #777;
-            font-size: 10px;
-            margin-bottom: 4px;
+            color: #bbb;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
-        .detail-chunk .chunk-text {
-            color: #bbb;
-        }
-
-        .live-badge {
-            display: inline-block;
-            background: #ff6b6b;
-            color: #fff;
-            font-size: 10px;
+        .source-item .source-file {
+            color: #ddd;
             font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-right: 6px;
-            vertical-align: middle;
         }
 
-        .listening-bubble {
-            font-style: italic;
-            color: #aaa !important;
-            animation: pulseOpacity 1.4s ease-in-out infinite;
+        .source-item .source-folder,
+        .source-item .source-date {
+            color: #888;
         }
 
-        @keyframes pulseOpacity {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        .source-item .source-file::after,
+        .source-item .source-folder::after {
+            content: '•';
+            margin-left: 10px;
+            color: #444;
+        }
+
+        .modo-live-status .msg-bubble {
+            background: #1e2330;
+            color: #e8e8e8;
+            border: 1px solid #2a2f3a;
+            border-radius: 16px;
+            font-size: 14px;
+            padding: 12px 16px;
         }
 
         .search-box {
@@ -715,38 +736,6 @@
         }
 
         // ===================================================================
-        // EXTRACCION DE SNIPPETS
-        // ===================================================================
-        function extractRelevantSnippet(chunkText, queryWords) {
-            const text = chunkText.toLowerCase();
-            let bestStart = 0;
-            let bestScore = -1;
-            const windowSize = 80;
-
-            for (let i = 0; i < text.length - windowSize; i += 20) {
-                let score = 0;
-                const window = text.substring(i, i + windowSize);
-                queryWords.forEach(word => {
-                    if (window.includes(word)) score++;
-                });
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestStart = i;
-                }
-            }
-
-            let start = bestStart;
-            while (start > 0 && chunkText[start - 1] !== ' ' && chunkText[start - 1] !== '\n') start--;
-            let end = Math.min(start + windowSize, chunkText.length);
-            while (end < chunkText.length && chunkText[end] !== ' ' && chunkText[end] !== '\n') end++;
-
-            let snippet = chunkText.substring(start, end).trim();
-            if (start > 0) snippet = '...' + snippet;
-            if (end < chunkText.length) snippet = snippet + '...';
-            return snippet;
-        }
-
-        // ===================================================================
         // CONSTRUIR CONTEXTO PARA PROMPT
         // ===================================================================
         function buildContext(chunks) {
@@ -812,6 +801,58 @@
             return div.innerHTML;
         }
 
+        // ===================================================================
+        // CONTEXTO DE CONVERSACION (para resolver preguntas de seguimiento)
+        // ===================================================================
+        function getRecentHistory(maxTurns) {
+            return qaHistory.slice(-maxTurns).filter(h => h.question && h.answer);
+        }
+
+        function buildHistoryBlock(maxTurns) {
+            const recent = getRecentHistory(maxTurns || 3);
+            if (recent.length === 0) return '';
+            const lines = recent.map(h => 'Usuario: ' + h.question + '\nAsistente: ' + h.answer).join('\n\n');
+            return '\n\nHISTORIAL RECIENTE DE LA CONVERSACION (usalo unicamente para entender referencias como "eso", "cuando se creo", "quien lo propuso", etc. No repitas esta informacion, solo interpretala):\n' + lines + '\n';
+        }
+
+        // Amplia la busqueda de chunks con la ultima pregunta, para que las
+        // preguntas de seguimiento sin palabras clave propias (ej. "¿cuando se creo?")
+        // sigan recuperando los documentos correctos.
+        function buildRetrievalQuery(query) {
+            const recent = getRecentHistory(1);
+            if (recent.length === 0) return query;
+            return (recent[0].question + ' ' + query).trim();
+        }
+
+        // ===================================================================
+        // DETECCION DE SOLICITUD DE GENERACION DE DOCUMENTOS
+        // ===================================================================
+        function detectDocumentRequest(query) {
+            const q = query.toLowerCase();
+            const actionWords = /(genera|generame|redacta|redactame|escribe|escribeme|crea|creame|elabora|elaborame|hazme|haz|prepara|preparame)/;
+            const docWords = /(carta|certificado|constancia|oficio|memorando|comunicado|documento|informe|acta|solicitud)/;
+            return actionWords.test(q) && docWords.test(q);
+        }
+
+        // Genera un archivo .doc (compatible con Word) descargable a partir de HTML
+        function generateDocDownload(title, htmlBodyContent) {
+            const htmlDoc = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+                '<head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' +
+                '<style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt;line-height:1.6;color:#000;} h1,h2,h3{color:#000;}</style>' +
+                '</head><body>' + htmlBodyContent + '</body></html>';
+            const blob = new Blob(['\ufeff' + htmlDoc], { type: 'application/msword' });
+            return URL.createObjectURL(blob);
+        }
+
+        function slugifyFilename(text) {
+            return (text || 'documento')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '')
+                .slice(0, 40) || 'documento';
+        }
+
         function setInputsDisabled(disabled) {
             document.getElementById('query').disabled = disabled;
             document.getElementById('searchBtn').disabled = disabled;
@@ -832,6 +873,8 @@
         }
 
         async function authenticate() {
+            requestFullscreenOnTouch();
+
             const apiKey = document.getElementById('apiKey').value.trim();
             const authLoading = document.getElementById('authLoading');
             const apiSuccess = document.getElementById('apiSuccess');
@@ -871,44 +914,60 @@
             }
         }
 
-        function renderDetailPanel(chunks, queryWords, panelId) {
-            let html = '<div class="detail-panel" id="' + panelId + '">';
-            html += '<h4>Fragmentos encontrados</h4>';
-
-            chunks.forEach((chunk, i) => {
-                const color = COLORS[i % COLORS.length];
-                const snippet = extractRelevantSnippet(chunk.text, queryWords);
+        function renderDetailPanel(chunks, panelId) {
+            // Agrupar por documento para no repetir la misma fuente varias veces
+            const seen = new Set();
+            const docs = [];
+            chunks.forEach(chunk => {
                 const doc = chunk._doc;
-                html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
-                    '<div class="chunk-header"><span>' + escapeHtml(doc.file?.name || 'desconocido') + '</span><span>' + escapeHtml(doc.committee || 'general') + '</span><span>' + escapeHtml(doc.dates?.start || 'sin fecha') + '</span></div>' +
-                    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
-                    '</div>';
+                const key = doc.document_id || ((doc.file?.name || '') + '|' + (doc.dates?.start || ''));
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    docs.push(doc);
+                }
             });
 
-            html += '</div>';
+            let html = '<div class="detail-panel" id="' + panelId + '">';
+            html += '<h4>Fuentes</h4>';
+            html += '<ul class="source-list">';
+
+            docs.forEach((doc, i) => {
+                const color = COLORS[i % COLORS.length];
+                const fileName = doc.file?.name || 'Documento sin nombre';
+                const folder = doc.file?.folder || doc.folder || doc.committee || 'Sin carpeta';
+                const date = doc.dates?.start || 'Sin fecha';
+                html += '<li class="source-item" style="border-left-color:' + color + '">' +
+                    '<span class="source-file">' + escapeHtml(fileName) + '</span>' +
+                    '<span class="source-folder">' + escapeHtml(folder) + '</span>' +
+                    '<span class="source-date">' + escapeHtml(date) + '</span>' +
+                    '</li>';
+            });
+
+            html += '</ul></div>';
             return html;
         }
 
-        function addMessageToChat(question, answer, isLive, chunks) {
+        function addMessageToChat(question, answer, isLive, chunks, downloadUrl, downloadName) {
             ensureChatMode();
             const chatArea = document.getElementById('chatArea');
             const qaId = 'qa-' + Date.now();
             const panelId = 'detail-' + qaId;
             const btnId = 'btn-info-' + qaId;
-            const queryWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-
-            const liveBadge = isLive ? '<span class="live-badge">Live</span>' : '';
 
             const userHtml = '<div class="msg-row user" id="' + qaId + '-q">' +
-                '<div class="msg-bubble">' + liveBadge + escapeHtml(question) + '</div></div>';
+                '<div class="msg-bubble">' + escapeHtml(question) + '</div></div>';
 
-            const detailHtml = chunks && chunks.length > 0 ? renderDetailPanel(chunks, queryWords, panelId) : '';
+            const detailHtml = chunks && chunks.length > 0 ? renderDetailPanel(chunks, panelId) : '';
+            const infoBtnHtml = chunks && chunks.length > 0 ?
+                '<button class="btn-info" id="' + btnId + '" onclick="toggleDetail(\'' + btnId + '\', \'' + panelId + '\')" title="Ver fuentes">i</button>' : '';
+
+            const downloadHtml = downloadUrl ?
+                '<div class="doc-download"><a href="' + downloadUrl + '" download="' + escapeHtml(downloadName || 'documento.doc') + '" class="btn-download">📄 Descargar documento</a></div>' : '';
 
             const ansHtml = '<div class="msg-row assistant" id="' + qaId + '-a">' +
                 '<div class="msg-bubble">' + formatMarkdown(answer) +
-                '<div class="msg-meta">' +
-                '<button class="btn-info" id="' + btnId + '" onclick="toggleDetail(\'' + btnId + '\', \'' + panelId + '\')" title="Ver fuentes">i</button>' +
-                '</div>' +
+                downloadHtml +
+                (infoBtnHtml ? '<div class="msg-meta">' + infoBtnHtml + '</div>' : '') +
                 detailHtml +
                 '</div></div>';
 
@@ -920,10 +979,11 @@
             return qaId;
         }
 
-        function addSystemMessage(text) {
+        function addSystemMessage(text, plain) {
             ensureChatMode();
             const chatArea = document.getElementById('chatArea');
-            const html = '<div class="msg-row system"><div class="msg-bubble">' + escapeHtml(text) + '</div></div>';
+            const rowClass = plain ? 'msg-row system modo-live-status' : 'msg-row system';
+            const html = '<div class="' + rowClass + '"><div class="msg-bubble">' + escapeHtml(text) + '</div></div>';
             chatArea.insertAdjacentHTML('beforeend', html);
             chatArea.scrollTop = chatArea.scrollHeight;
         }
@@ -979,7 +1039,8 @@
             document.getElementById('loadingBox').classList.add('show');
 
             try {
-                const relevantChunks = findRelevantChunks(query);
+                const retrievalQuery = buildRetrievalQuery(query);
+                const relevantChunks = findRelevantChunks(retrievalQuery);
 
                 if (relevantChunks.length === 0) {
                     document.getElementById('loadingBox').classList.remove('show');
@@ -992,8 +1053,12 @@
                 }
 
                 const context = buildContext(relevantChunks);
+                const historyBlock = buildHistoryBlock(3);
+                const wantsDocument = detectDocumentRequest(query);
 
-                const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un analisis conciso basado en la informacion. Prioriza la informacion mas reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un analisis breve (menos de 50 palabras) basado UNICAMENTE en los documentos\n2. Prioriza la informacion mas reciente\n3. Si la informacion no esta, di "No encontre informacion"';
+                const prompt = wantsDocument
+                    ? 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Con base en los documentos proporcionados, redacta el documento que pide el usuario de forma completa, formal y bien estructurada (encabezado, cuerpo, cierre y firma si corresponde). Usa fechas, nombres, cargos y decisiones reales de los documentos cuando sean relevantes; si falta un dato especifico, deja un marcador claro como "[completar]" en vez de inventarlo.\n\nDOCUMENTOS RELEVANTES:\n' + context + historyBlock + '\n\nSOLICITUD DEL USUARIO: ' + query + '\n\nEntrega unicamente el texto completo del documento, listo para usar.'
+                    : 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve (menos de 50 palabras) con base en los documentos proporcionados. Prioriza la informacion mas reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + historyBlock + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Basa tu respuesta en la informacion de los documentos proporcionados\n2. Si la pregunta hace referencia a algo mencionado antes en la conversacion (ej. "eso", "cuando se creo", "quien lo propuso"), usa el HISTORIAL para saber a que se refiere\n3. Si la pregunta pide un analisis, opinion o inferencia que no esta escrita explicitamente (ej. que podria faltar, riesgos, recomendaciones), razona brevemente a partir de la informacion disponible y aclara que es un analisis\n4. Si la pregunta busca un dato factual puntual que simplemente no aparece en los documentos ni se puede inferir, di "No encontre informacion sobre esto en los documentos"\n5. Prioriza la informacion mas reciente si hay datos repetidos';
 
                 const response = await fetch(
                     'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_CHAT_MODEL + ':generateContent?key=' + apiKey,
@@ -1015,10 +1080,18 @@
                 let answer = (data.candidates && data.candidates[0] &&
                     data.candidates[0].content.parts[0].text) || 'No pude generar respuesta';
 
-                answer = truncateToWords(answer, 50);
+                let downloadUrl = null;
+                let downloadName = null;
+
+                if (wantsDocument) {
+                    downloadUrl = generateDocDownload(query, formatMarkdown(answer));
+                    downloadName = slugifyFilename(query) + '.doc';
+                } else {
+                    answer = truncateToWords(answer, 50);
+                }
 
                 document.getElementById('loadingBox').classList.remove('show');
-                addMessageToChat(query, answer, false, relevantChunks);
+                addMessageToChat(query, answer, false, relevantChunks, downloadUrl, downloadName);
 
             } catch (error) {
                 document.getElementById('loadingBox').classList.remove('show');
@@ -1059,7 +1132,7 @@
             const id = 'listening-' + Date.now();
             liveListeningBubbleId = id;
             const html = '<div class="msg-row user" id="' + id + '">' +
-                '<div class="msg-bubble listening-bubble"><span class="live-badge">Live</span>Escuchando...</div></div>';
+                '<div class="msg-bubble">Escuchando...</div></div>';
             chatArea.insertAdjacentHTML('beforeend', html);
             chatArea.scrollTop = chatArea.scrollHeight;
         }
@@ -1102,9 +1175,9 @@
                     }).join('\n\n---\n\n');
             }
 
-            return 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve, clara y concisa como en una conversacion de voz. Si no sabes algo, di "No tengo esa informacion".\n' +
+            return 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve, clara y concisa como en una conversacion de voz. Recuerda lo dicho antes en esta misma conversacion para entender referencias como "eso" o "cuando se creo". Si no sabes algo, di "No tengo esa informacion".\n' +
                 kbContext +
-                '\n\nINSTRUCCIONES:\n1. Responde en maximo 30 palabras\n2. Usa un tono conversacional y amigable\n3. Si preguntan por algo especifico de los documentos, usa la informacion proporcionada\n4. Si no estas seguro, di "No tengo esa informacion"';
+                '\n\nINSTRUCCIONES:\n1. Responde en maximo 30 palabras\n2. Usa un tono conversacional y amigable\n3. Si preguntan por algo especifico de los documentos, usa la informacion proporcionada\n4. Si piden un analisis breve (ej. que podria faltar), razona en pocas palabras con base en la informacion disponible\n5. Si no estas seguro, di "No tengo esa informacion"';
         }
 
         async function startLiveMode() {
@@ -1116,7 +1189,7 @@
             liveOutputBuffer = '';
             liveAnswerId = null;
 
-            addSystemMessage('Modo Live activo — Puedes hablar');
+            addSystemMessage('Modo Live activo — Puedes hablar', true);
 
             // Conectar WebSocket a Gemini Live
             const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
@@ -1184,8 +1257,8 @@
                                 removeListeningBubble();
                                 liveAnswerId = 'live-' + Date.now();
                                 const qText = liveInputBuffer.trim() || '(entrada de voz)';
-                                const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(qText) + '</div></div>';
-                                const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text"></span></div></div>';
+                                const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble">' + escapeHtml(qText) + '</div></div>';
+                                const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-answer-text"></span></div></div>';
                                 chatArea.insertAdjacentHTML('beforeend', qHtml + aHtml);
                                 liveOutputBuffer = '';
                             }
@@ -1278,7 +1351,7 @@
             liveOutputBuffer = '';
 
             if (wasLive) {
-                addSystemMessage('Finalizo Modo Live - Escribe para continuar.');
+                addSystemMessage('Finalizo Modo Live - Escribe para continuar.', true);
             }
         }
 
@@ -1479,27 +1552,23 @@
 // ===================================================================
 // PANTALLA COMPLETA EN DISPOSITIVOS TACTILES
 // ===================================================================
-(function initFullscreen() {
-    // Detectar si es dispositivo tactil
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+// Se activa al oprimir el boton de enviar el codigo de acceso (authenticate()),
+// que es el propio gesto del usuario requerido por el navegador para permitir pantalla completa.
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    if (!isTouchDevice) return; // Solo en tactiles
+function requestFullscreenOnTouch() {
+    if (!isTouchDevice) return;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
 
-    // Al primer toque en cualquier parte, pedir pantalla completa
-    function requestFullscreen() {
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(() => {});
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) {
-            elem.msRequestFullscreen();
-        }
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+    } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
     }
-
-    // Escuchar el primer toque
-    document.addEventListener('touchstart', requestFullscreen, { once: true });
-})();
+}
     </script>
 </body>
 </html>

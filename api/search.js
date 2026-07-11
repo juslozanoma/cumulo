@@ -13,24 +13,43 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { query, context, mode } = req.body;
+  const { query, context, mode, history, documentMode } = req.body;
+
+  // 'history' (opcional): arreglo de turnos previos [{ question, answer }, ...]
+  // Se usa para que preguntas de seguimiento ("cuando se creo?") se entiendan
+  // en el contexto de lo preguntado antes, sin repetirlo en la respuesta.
+  const historyBlock = Array.isArray(history) && history.length > 0
+    ? `\n\nHISTORIAL RECIENTE DE LA CONVERSACION (usalo solo para entender referencias como "eso", "cuando se creo", "quien lo propuso", etc.):\n` +
+      history.slice(-3).map(h => `Usuario: ${h.question}\nAsistente: ${h.answer}`).join('\n\n') + '\n'
+    : '';
 
   // Modo Live: el contexto ya viene enriquecido desde el frontend
   // Modo Chat: el contexto también viene del frontend (findRelevantChunks)
-  const prompt = `Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo.
+  const prompt = documentMode
+    ? `Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Con base en los documentos proporcionados, redacta el documento que pide el usuario (carta, certificado, constancia, etc.) de forma completa, formal y bien estructurada (encabezado, cuerpo, cierre y firma si corresponde). Usa fechas, nombres, cargos y decisiones reales de los documentos cuando sean relevantes; si falta un dato especifico, deja un marcador claro como "[completar]" en vez de inventarlo.
 
 DOCUMENTOS RELEVANTES:
-${context || 'No se encontraron documentos relevantes.'}
+${context || 'No se encontraron documentos relevantes.'}${historyBlock}
+
+SOLICITUD DEL USUARIO: ${query}
+
+Entrega unicamente el texto completo del documento, listo para usar.`
+    : `Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo.
+
+DOCUMENTOS RELEVANTES:
+${context || 'No se encontraron documentos relevantes.'}${historyBlock}
 
 PREGUNTA DEL USUARIO: ${query}
 
 INSTRUCCIONES:
-1. Responde UNICAMENTE basandote en los documentos proporcionados
-2. Si la informacion no esta en los documentos, di claramente "No encontre informacion sobre esto en los documentos"
-3. Se preciso sobre fechas, decisiones y personas mencionadas
-4. Si hay decisiones anuladas o actualizadas, menciona ambas versiones
-5. Estructura tu respuesta de forma clara y facil de leer
-6. ${mode === 'live' ? 'Responde de forma extremadamente breve y concisa (máximo 30 palabras), como en una conversación de voz.' : 'Responde con un analisis breve (menos de 50 palabras).'}`;
+1. Basa tu respuesta en la informacion de los documentos proporcionados
+2. Si la pregunta hace referencia a algo mencionado antes en la conversacion, usa el HISTORIAL para saber a que se refiere
+3. Si la pregunta pide un analisis, opinion o inferencia que no esta escrita explicitamente (ej. que podria faltar, riesgos, recomendaciones), razona brevemente a partir de la informacion disponible y aclara que es un analisis
+4. Si la pregunta busca un dato factual puntual que simplemente no aparece en los documentos ni se puede inferir, di claramente "No encontre informacion sobre esto en los documentos"
+5. Se preciso sobre fechas, decisiones y personas mencionadas
+6. Si hay decisiones anuladas o actualizadas, menciona ambas versiones
+7. Estructura tu respuesta de forma clara y facil de leer
+8. ${mode === 'live' ? 'Responde de forma extremadamente breve y concisa (máximo 30 palabras), como en una conversación de voz.' : 'Responde con un analisis breve (menos de 50 palabras).'}`;
 
   try {
     const model = mode === 'live' ? 'gemini-3.1-flash-live-preview' : 'gemini-3.1-flash-lite';
