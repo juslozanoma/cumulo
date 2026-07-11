@@ -1050,298 +1050,233 @@ html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
         }
 
         async function startLiveMode() {
-            const apiKey = document.getElementById('apiKey').value.trim();
+    const apiKey = document.getElementById('apiKey').value.trim();
 
-            isLiveMode = true;
-            updateLiveButtonUI(true);
-            liveInputBuffer = '';
-            liveOutputBuffer = '';
-            liveAnswerId = null;
+    isLiveMode = true;
+    updateLiveButtonUI(true);
+    liveInputBuffer = '';
+    liveOutputBuffer = '';
+    liveAnswerId = null;
 
-            addSystemMessage('Modo Live activo — Puedes hablar en voz alta');
+    addSystemMessage('Modo Live activo — Habla y te escucho');
 
-            // Conectar WebSocket (endpoint v1beta, autenticación por API key en la URL)
-            const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
-
-            try {
-                liveWs = new WebSocket(wsUrl);
-
-                liveWs.onopen = () => {
-                    console.log('Live WebSocket connected');
-                    liveWs.send(JSON.stringify({
-                        setup: {
-                            model: 'models/' + GEMINI_LIVE_MODEL,
-                            generationConfig: {
-                                responseModalities: ["AUDIO"],
-                                speechConfig: {
-                                    voiceConfig: {
-                                        prebuiltVoiceConfig: {
-                                            voiceName: "Puck"
-                                        }
-                                    }
-                                }
-                            },
-                            systemInstruction: {
-                                parts: [{ text: 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve y concisa.' }]
-                            },
-                            // inputAudioTranscription / outputAudioTranscription van al mismo nivel que
-                            // generationConfig dentro de "setup" (NO anidados dentro de generationConfig).
-                            // Metidos ahí adentro, el servidor los rechaza y cierra la conexión de inmediato
-                            // apenas se envía el setup — eso era lo que cortaba el modo Live al instante.
-                            inputAudioTranscription: {},
-                            outputAudioTranscription: {}
-                        }
-                    }));
-                };
-
-                liveWs.onmessage = (event) => {
-                    const response = JSON.parse(event.data);
-                    console.log('Live response:', response);
-
-                    if (response.setupComplete) {
-                        console.log('Live setup complete');
-                        startMicrophoneCapture();
-                        showListeningBubble();
-                    }
-
-                    if (response.serverContent) {
-                        const sc = response.serverContent;
-                        const chatArea = document.getElementById('chatArea');
-
-                        // El usuario interrumpió al modelo: cortar la reproducción en curso
-                        if (sc.interrupted) {
-                            stopAllLiveAudio();
-                        }
-
-                        // La transcripción llega en fragmentos (deltas), no completa; hay que acumularla
-                        if (sc.inputTranscription && typeof sc.inputTranscription.text === 'string') {
-                            liveInputBuffer += sc.inputTranscription.text;
-                        }
-
-                        // La primera porción de la respuesta indica que el usuario terminó de hablar:
-                        // ahí "soltamos" la pregunta acumulada y arrancamos la burbuja de respuesta.
-                        if (sc.outputTranscription && typeof sc.outputTranscription.text === 'string') {
-                            if (!liveAnswerId) {
-                                removeListeningBubble();
-                                liveAnswerId = 'live-' + Date.now();
-                                const qText = liveInputBuffer.trim() || '(entrada de voz)';
-                                const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(qText) + '</div></div>';
-                                const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text"></span></div></div>';
-                                chatArea.insertAdjacentHTML('beforeend', qHtml + aHtml);
-                                liveOutputBuffer = '';
-                            }
-                            liveOutputBuffer += sc.outputTranscription.text;
-                            const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
-                            if (ansTextEl) ansTextEl.innerHTML = formatMarkdown(liveOutputBuffer);
-                            chatArea.scrollTop = chatArea.scrollHeight;
-                        }
-
-                        // Turno completo → guardar en historial y volver a escuchar
-                        if (sc.turnComplete) {
-                            if (liveAnswerId) {
-                                qaHistory.push({
-                                    id: liveAnswerId,
-                                    question: liveInputBuffer.trim(),
-                                    answer: liveOutputBuffer.trim(),
-                                    chunks: [],
-                                    isLive: true,
-                                    timestamp: new Date()
-                                });
-                            }
-                            liveAnswerId = null;
-                            liveInputBuffer = '';
-                            liveOutputBuffer = '';
-                            if (isLiveMode) showListeningBubble();
-                        }
-
-                        // Audio de salida (PCM crudo, 24kHz, 16-bit, mono, little-endian)
-                        if (sc.modelTurn && sc.modelTurn.parts) {
-                            for (const part of sc.modelTurn.parts) {
-                                if (part.inlineData && part.inlineData.data) {
-                                    playAudioChunk(part.inlineData.data);
-                                }
-                            }
-                        }
-                    }
-                };
-
-                liveWs.onerror = (error) => {
-                    console.error('Live WebSocket error:', error);
-                    addSystemMessage('Error de conexión en modo Live');
-                    stopLiveMode();
-                };
-
-                liveWs.onclose = () => {
-                    console.log('Live WebSocket closed');
-                    if (isLiveMode) stopLiveMode();
-                };
-
-            } catch (e) {
-                console.error('Error starting live mode:', e);
-                stopLiveMode();
-            }
-        }
+    // Usar Web Speech API para transcripción local (gratis, sin API key)
+    // Fallback: usar Gemini STT si no está disponible
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        startBrowserSpeechRecognition();
+    } else {
+        // Fallback: usar Gemini para transcribir (más costoso)
+        startGeminiSpeechRecognition(apiKey);
+    }
+}
 
         function stopLiveMode() {
-            const wasLive = isLiveMode;
-            isLiveMode = false;
-            updateLiveButtonUI(false);
-            removeListeningBubble();
+    const wasLive = isLiveMode;
+    isLiveMode = false;
+    updateLiveButtonUI(false);
+    removeListeningBubble();
 
-            if (liveWs) {
-                liveWs.close();
-                liveWs = null;
-            }
+    // Detener reconocimiento de voz
+    if (speechRecognition) {
+        speechRecognition.stop();
+        speechRecognition = null;
+    }
 
-            if (liveMediaStream) {
-                liveMediaStream.getTracks().forEach(t => t.stop());
-                liveMediaStream = null;
-            }
+    // Detener micrófono
+    if (liveMediaStream) {
+        liveMediaStream.getTracks().forEach(t => t.stop());
+        liveMediaStream = null;
+    }
 
-            if (liveAudioWorklet) {
-                liveAudioWorklet.disconnect();
-                liveAudioWorklet = null;
-            }
+    // Detener audio context
+    if (liveAudioContext) {
+        liveAudioContext.close();
+        liveAudioContext = null;
+    }
 
-            if (liveAudioContext) {
-                liveAudioContext.close();
-                liveAudioContext = null;
-            }
+    // Detener TTS
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
 
-            stopAllLiveAudio();
-            if (liveOutputCtx) {
-                liveOutputCtx.close();
-                liveOutputCtx = null;
-            }
+    liveAnswerId = null;
+    liveInputBuffer = '';
+    liveOutputBuffer = '';
 
-            liveAnswerId = null;
-            liveInputBuffer = '';
-            liveOutputBuffer = '';
+    if (wasLive) {
+        addSystemMessage('Finalizó Modo Live - Escribe para continuar.');
+    }
+}
 
-            if (wasLive) {
-                addSystemMessage('Finalizó Modo Live - Escribe para continuar.');
-            }
-        }
+let speechRecognition = null;
 
-        async function startMicrophoneCapture() {
-            try {
-                liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                liveAudioContext = new AudioContext({ sampleRate: 16000 });
-                const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
+function startBrowserSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    speechRecognition = new SpeechRecognition();
+    speechRecognition.lang = 'es-ES';
+    speechRecognition.continuous = true;
+    speechRecognition.interimResults = true;
 
-                // Crear ScriptProcessor para capturar audio PCM
-                const bufferSize = 4096;
-                const processor = liveAudioContext.createScriptProcessor(bufferSize, 1, 1);
+    let finalTranscript = '';
+    let silenceTimer = null;
 
-                processor.onaudioprocess = (e) => {
-                    if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
-
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    // Convertir float32 a int16 PCM
-                    const pcmData = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                    }
-
-                    const base64 = arrayBufferToBase64(pcmData.buffer);
-                    liveWs.send(JSON.stringify({
-                        realtimeInput: {
-                            audio: {
-                                data: base64,
-                                mimeType: 'audio/pcm;rate=16000'
-                            }
-                        }
-                    }));
-                };
-
-                source.connect(processor);
-                processor.connect(liveAudioContext.destination);
-                liveAudioWorklet = processor;
-
-            } catch (e) {
-                console.error('Error accessing microphone:', e);
-                addSystemMessage('No se pudo acceder al micrófono. Verifica los permisos.');
+    speechRecognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript + ' ';
+            } else {
+                interim += transcript;
             }
         }
 
-        function arrayBufferToBase64(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
+        // Mostrar lo que se está escuchando
+        if (interim || finalTranscript) {
+            showListeningBubble();
+            const bubble = document.querySelector('#' + liveListeningBubbleId + ' .msg-bubble');
+            if (bubble) {
+                bubble.innerHTML = '<span class="live-badge">Live</span>' + escapeHtml(finalTranscript + interim);
             }
-            return btoa(binary);
         }
 
+        // Detectar pausa para procesar
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+            if (finalTranscript.trim()) {
+                processLiveQuery(finalTranscript.trim());
+                finalTranscript = '';
+            }
+        }, 1500); // 1.5 segundos de silencio = procesar
+    };
+
+    speechRecognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+            addSystemMessage('Permiso de micrófono denegado');
+            stopLiveMode();
+        }
+    };
+
+    speechRecognition.onend = () => {
+        if (isLiveMode) {
+            speechRecognition.start(); // Reiniciar si sigue en modo live
+        }
+    };
+
+    speechRecognition.start();
+}
+        
         // ─── Reproducción de audio del modelo ───
         // El audio llega como PCM crudo (sin cabecera), por lo que NO se puede usar
         // decodeAudioData (eso esperaba un archivo codificado tipo WAV/MP3 y fallaba
         // silenciosamente). Aquí se decodifica manualmente y se agenda en cola sobre
         // un único AudioContext persistente para que no se corte ni se solape.
-        function ensureOutputContext() {
-            if (!liveOutputCtx) {
-                liveOutputCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-                liveNextStartTime = liveOutputCtx.currentTime;
-            }
-            return liveOutputCtx;
-        }
-
-        function playAudioChunk(base64Data) {
-            try {
-                const ctx = ensureOutputContext();
-                const binaryStr = atob(base64Data);
-                const len = binaryStr.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
-
-                const view = new DataView(bytes.buffer);
-                const sampleCount = Math.floor(len / 2);
-                if (sampleCount === 0) return;
-
-                const audioBuffer = ctx.createBuffer(1, sampleCount, 24000);
-                const channelData = audioBuffer.getChannelData(0);
-                for (let i = 0; i < sampleCount; i++) {
-                    channelData[i] = view.getInt16(i * 2, true) / 32768; // little-endian
-                }
-
-                const source = ctx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(ctx.destination);
-
-                const now = ctx.currentTime;
-                if (liveNextStartTime < now) liveNextStartTime = now;
-                source.start(liveNextStartTime);
-                liveNextStartTime += audioBuffer.duration;
-
-                liveActiveSources.push(source);
-                source.onended = () => {
-                    const idx = liveActiveSources.indexOf(source);
-                    if (idx !== -1) liveActiveSources.splice(idx, 1);
-                };
-            } catch (e) {
-                console.error('Error reproduciendo audio:', e);
-            }
-        }
-
-        function stopAllLiveAudio() {
-            liveActiveSources.forEach(s => {
-                try { s.stop(); } catch (e) { /* ya pudo haber terminado */ }
-            });
-            liveActiveSources = [];
-            if (liveOutputCtx) liveNextStartTime = liveOutputCtx.currentTime;
-        }
 
         // Enviar texto durante el modo Live (sin hablar)
-        async function sendLiveText(text) {
-            if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
-            removeListeningBubble();
-            liveInputBuffer = text;
-            liveWs.send(JSON.stringify({
-                realtimeInput: {
-                    text: text
-                }
-            }));
+
+        async function processLiveQuery(queryText) {
+    removeListeningBubble();
+
+    // 1. Buscar chunks relevantes (igual que en modo chat)
+    const relevantChunks = findRelevantChunks(queryText);
+    
+    // 2. Armar contexto enriquecido (igual que en modo chat)
+    let context = '';
+    if (relevantChunks.length > 0) {
+        context = relevantChunks.map(chunk => {
+            const doc = chunk._doc;
+            const parts = [];
+            parts.push('📄 ' + doc.document_id + ' | ' + doc.document_type.toUpperCase() + ' | ' + doc.committee);
+            parts.push('📅 Fecha: ' + (doc.dates?.start || 'sin fecha') + ' | Estado: ' + doc.status);
+            if (doc.participants?.length > 0) {
+                parts.push('👥 Participantes: ' + doc.participants.map(p => p.name + ' (' + p.role + ')').join(', '));
+            }
+            parts.push('📝 Sección: ' + (chunk.section || 'contenido general'));
+            parts.push('');
+            parts.push(chunk.text);
+            return parts.join('\n');
+        }).join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+    }
+
+    // 3. Mostrar pregunta del usuario
+    liveAnswerId = 'live-' + Date.now();
+    const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(queryText) + '</div></div>';
+    const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text">Pensando...</span></div></div>';
+    document.getElementById('chatArea').insertAdjacentHTML('beforeend', qHtml + aHtml);
+    document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+
+    // 4. Consultar backend
+    try {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query: queryText,
+                context: context,
+                mode: 'live'
+            })
+        });
+
+        const data = await response.json();
+        let answer = 'No pude generar respuesta';
+
+        if (response.ok && data.candidates && data.candidates[0]) {
+            answer = data.candidates[0].content.parts[0].text;
+        } else if (data.error) {
+            answer = 'Error: ' + data.error.message;
         }
+
+        // 5. Mostrar respuesta
+        const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
+        if (ansTextEl) {
+            ansTextEl.innerHTML = formatMarkdown(answer);
+        }
+
+        // 6. Guardar en historial
+        qaHistory.push({
+            id: liveAnswerId,
+            question: queryText,
+            answer: answer,
+            chunks: relevantChunks,
+            isLive: true,
+            timestamp: new Date()
+        });
+
+        // 7. Leer en voz alta (Text-to-Speech)
+        speakText(answer);
+
+    } catch (error) {
+        const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
+        if (ansTextEl) {
+            ansTextEl.textContent = 'Error de conexión';
+        }
+    }
+
+    liveAnswerId = null;
+    if (isLiveMode) showListeningBubble();
+}
+
+        function speakText(text) {
+    if (!window.speechSynthesis) return;
+    
+    // Limpiar markdown para lectura
+    const cleanText = text
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/#{1,3}\s+(.+)/g, '$1.')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.1;
+    utterance.pitch = 1;
+
+    // Cancelar cualquier lectura anterior
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
 
         window.addEventListener('load', loadKB);
         document.getElementById('query').addEventListener('keypress', (e) => {
