@@ -24,17 +24,22 @@
 
         .container {
             width: 100%;
-            max-width: 560px;
+            max-width: 600px;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-height: 900px;
         }
 
         .logo {
             width: 220px;
             height: 220px;
-            margin: 0 auto 32px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .logo img {
@@ -48,13 +53,14 @@
             display: flex;
             gap: 8px;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
         }
 
         .api-setup {
             flex: 1;
             background: #1a1f2a;
-            padding: 16px;
+            padding: 14px;
             border-radius: 8px;
             border-left: 3px solid #f59e0b;
             transition: all 0.3s ease;
@@ -111,7 +117,7 @@
             background: #1a1f2a;
             padding: 14px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-left: 3px solid #0d7ee6;
             color: #aaa;
             font-size: 14px;
@@ -137,9 +143,9 @@
         .api-success {
             display: none;
             background: #1a2f1a;
-            padding: 14px;
+            padding: 12px 14px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-left: 3px solid #10b981;
             color: #10b981;
             font-size: 14px;
@@ -163,9 +169,9 @@
         .api-error {
             display: none;
             background: #2a1a1a;
-            padding: 14px;
+            padding: 12px 14px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-left: 3px solid #ff6b6b;
             color: #ff6b6b;
             font-size: 14px;
@@ -191,12 +197,194 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 8px 4px;
+            margin-bottom: 12px;
+            min-height: 0;
+        }
+
+        .chat-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #2a2f3a;
+            border-radius: 4px;
+        }
+
+        .msg-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .msg-row.user {
+            flex-direction: row-reverse;
+        }
+
+        .msg-row.assistant {
+            flex-direction: row;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: left;
+            position: relative;
+        }
+
+        .msg-row.user .msg-bubble {
+            background: #0d7ee6;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-row.assistant .msg-bubble {
+            background: #1e2330;
+            color: #e8e8e8;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #2a2f3a;
+        }
+
+        .msg-bubble p {
+            margin-bottom: 6px;
+        }
+
+        .msg-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 {
+            color: #fff;
+            margin: 8px 0 6px 0;
+            font-size: 15px;
+        }
+
+        .msg-bubble ul, .msg-bubble ol {
+            margin: 6px 0 6px 18px;
+        }
+
+        .msg-bubble li {
+            margin-bottom: 3px;
+        }
+
+        .msg-bubble b, .msg-bubble strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .msg-bubble em {
+            color: #ccc;
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #777;
+        }
+
+        .msg-row.user .msg-meta {
+            justify-content: flex-start;
+        }
+
+        .btn-info {
+            width: 22px;
+            height: 22px;
+            background: transparent;
+            border: 1px solid #444;
+            border-radius: 50%;
+            color: #888;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-info:hover {
+            border-color: #0d7ee6;
+            color: #0d7ee6;
+        }
+
+        .detail-panel {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .detail-panel.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .detail-panel h4 {
+            color: #888;
+            font-size: 11px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-chunk {
+            background: #161b26;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid;
+            font-size: 12px;
+            color: #999;
+            line-height: 1.5;
+        }
+
+        .detail-chunk .chunk-header {
+            color: #777;
+            font-size: 10px;
+            margin-bottom: 4px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .detail-chunk .chunk-text {
+            color: #bbb;
+        }
+
+        .live-badge {
+            display: inline-block;
+            background: #ff6b6b;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
         .search-box {
             position: relative;
-            margin-bottom: 20px;
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-shrink: 0;
+            margin-bottom: 12px;
         }
 
         #query {
@@ -255,24 +443,23 @@
         }
 
         .btn-live {
-            padding: 10px 16px;
-            background: #1a2f1a;
-            border: 1px solid #10b981;
+            width: 42px;
+            height: 42px;
+            background: transparent;
+            border: none;
             border-radius: 8px;
-            color: #10b981;
-            font-size: 13px;
-            font-weight: 500;
+            color: #888;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
             transition: all 0.2s;
             flex-shrink: 0;
         }
 
         .btn-live:hover {
-            background: #10b981;
-            color: #0a0e17;
+            background: #1f2530;
+            color: #10b981;
         }
 
         .btn-live:disabled {
@@ -281,201 +468,17 @@
         }
 
         .btn-live.active {
-            background: #ff6b6b;
-            border-color: #ff6b6b;
-            color: #fff;
+            background: #1a2f1a;
+            color: #ff6b6b;
         }
 
         .btn-live.active:hover {
-            background: #e55a5a;
+            background: #2a1a1a;
         }
 
-        .btn-live .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #ff6b6b;
-            border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .results {
-            display: none;
-            margin-top: 30px;
-            text-align: left;
-        }
-
-        .results.show {
-            display: block;
-        }
-
-        .qa-block {
-            margin-bottom: 16px;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .qa-question {
-            background: #1a1f2a;
-            padding: 12px 16px;
-            border-radius: 8px 8px 0 0;
-            border-left: 3px solid #0d7ee6;
-            color: #aaa;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .qa-question svg {
-            width: 14px;
-            height: 14px;
-            color: #0d7ee6;
-            flex-shrink: 0;
-        }
-
-        .qa-answer {
-            background: #1e2330;
-            padding: 16px;
-            border-radius: 0 0 8px 8px;
-            border-left: 3px solid #10b981;
-            color: #e8e8e8;
-            line-height: 1.7;
-            font-size: 15px;
-        }
-
-        .qa-answer.live-mode {
-            border-left-color: #ff6b6b;
-        }
-
-        .qa-answer strong {
-            color: #fff;
-            display: block;
-            margin-bottom: 10px;
-            font-size: 15px;
-        }
-
-        .qa-answer p {
-            color: #ccc;
-            line-height: 1.7;
-            margin-bottom: 6px;
-        }
-
-        .qa-answer h1, .qa-answer h2, .qa-answer h3 {
-            color: #fff;
-            margin: 12px 0 8px 0;
-            font-size: 16px;
-        }
-
-        .qa-answer ul, .qa-answer ol {
-            margin: 8px 0 8px 20px;
-            color: #ccc;
-        }
-
-        .qa-answer li {
-            margin-bottom: 4px;
-        }
-
-        .qa-answer b, .qa-answer strong.inline {
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .btn-more {
-            display: inline-block;
-            margin-top: 14px;
-            padding: 8px 18px;
-            background: #2a2f3a;
-            color: #0d7ee6;
-            border: 1px solid #2a2f3a;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-more:hover {
-            background: #1f2530;
-            border-color: #0d7ee6;
-        }
-
-        .detail-box {
-            display: none;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #333;
-        }
-
-        .detail-box.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .detail-box h4 {
-            color: #888;
-            font-size: 12px;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .detail-chunk {
-            background: #161b26;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid;
-            font-size: 12px;
-            color: #999;
-            line-height: 1.6;
-        }
-
-        .detail-chunk .chunk-header {
-            color: #777;
-            font-size: 11px;
-            margin-bottom: 6px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .detail-chunk .chunk-text {
-            color: #bbb;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .loading-box {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 30px;
-            color: #888;
-            font-size: 15px;
-        }
-
-        .loading-box.show {
-            display: flex;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 30px;
-            color: #888;
-        }
-
-        .no-results strong {
-            display: block;
-            font-size: 17px;
-            margin-bottom: 6px;
-            color: #ccc;
+        .btn-live svg {
+            width: 20px;
+            height: 20px;
         }
 
         .live-indicator {
@@ -489,6 +492,7 @@
             border-left: 3px solid #ff6b6b;
             color: #ff6b6b;
             font-size: 13px;
+            flex-shrink: 0;
         }
 
         .live-indicator.show {
@@ -501,6 +505,79 @@
             background: #ff6b6b;
             border-radius: 50%;
             animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-box {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .loading-box.show {
+            display: flex;
+        }
+
+        .btn-history {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #2a2f3a;
+            border-radius: 8px;
+            color: #888;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            margin-bottom: 12px;
+        }
+
+        .btn-history:hover {
+            border-color: #0d7ee6;
+            color: #0d7ee6;
+        }
+
+        .history-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 8px 4px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .history-panel.show {
+            display: flex;
+        }
+
+        .history-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .history-panel::-webkit-scrollbar-thumb {
+            background: #2a2f3a;
+            border-radius: 4px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            font-size: 14px;
         }
     </style>
 <base target="_blank">
@@ -546,8 +623,19 @@
 
         <div class="live-indicator" id="liveIndicator">
             <div class="live-dot"></div>
-            Modo Live activo — habla o escribe para consultar
+            Modo Live activo — Puedes hablar
         </div>
+
+        <div class="chat-area" id="chatArea"></div>
+
+        <div class="loading-box" id="loadingBox">
+            <div class="spinner"></div>
+            Buscando...
+        </div>
+
+        <button class="btn-history" id="btnHistory" onclick="toggleHistory()">Consultar historial</button>
+
+        <div class="history-panel" id="historyPanel"></div>
 
         <div class="search-box">
             <input type="text" id="query" placeholder="Pregunta sobre decisiones, actas o procesos de Cumulo" disabled>
@@ -557,13 +645,13 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
             </button>
-            <button class="btn-live" id="btnLive" onclick="toggleLive()" disabled>
-                <div class="live-dot"></div>
-                Live
+            <button class="btn-live" id="btnLive" onclick="toggleLive()" disabled aria-label="Live">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                </svg>
             </button>
         </div>
-
-        <div id="results" class="results"></div>
     </div>
 
     <script>
@@ -571,8 +659,16 @@
         let isAuthenticated = false;
         let isLiveMode = false;
         let qaHistory = [];
-        let liveRecognition = null;
+        let liveWs = null;
         let isProcessing = false;
+        let currentLiveAnswerId = null;
+        let liveAudioContext = null;
+        let liveMediaStream = null;
+        let liveAudioWorklet = null;
+
+        const GEMINI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+        const GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+        const COLORS = ['#10b981', '#0d7ee6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
         async function loadKB() {
             try {
@@ -618,11 +714,41 @@
                 .map(x => x.chunk);
         }
 
+        function extractRelevantSnippet(chunkText, queryWords) {
+            const text = chunkText.toLowerCase();
+            let bestStart = 0;
+            let bestScore = -1;
+            const windowSize = 80; // ~50 words
+
+            for (let i = 0; i < text.length - windowSize; i += 20) {
+                let score = 0;
+                const window = text.substring(i, i + windowSize);
+                queryWords.forEach(word => {
+                    if (window.includes(word)) score++;
+                });
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestStart = i;
+                }
+            }
+
+            let start = bestStart;
+            // Expand to word boundaries
+            while (start > 0 && chunkText[start - 1] !== ' ' && chunkText[start - 1] !== '\n') start--;
+            let end = Math.min(start + windowSize, chunkText.length);
+            while (end < chunkText.length && chunkText[end] !== ' ' && chunkText[end] !== '\n') end++;
+
+            let snippet = chunkText.substring(start, end).trim();
+            if (start > 0) snippet = '...' + snippet;
+            if (end < chunkText.length) snippet = snippet + '...';
+            return snippet;
+        }
+
         async function verifyApiKey(apiKey) {
             try {
                 const testPrompt = 'Responde únicamente "OK".';
                 const response = await fetch(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=' + apiKey,
+                    'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_CHAT_MODEL + ':generateContent?key=' + apiKey,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -639,7 +765,7 @@
 
         function formatMarkdown(text) {
             return text
-                .replace(/\*\*(.+?)\*\*/g, '<strong class="inline">$1</strong>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.+?)\*/g, '<em>$1</em>')
                 .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
                 .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
@@ -655,16 +781,10 @@
             return words.slice(0, maxWords).join(' ') + '...';
         }
 
-        function toggleDetails(btnId, boxId) {
-            const box = document.getElementById(boxId);
-            const btn = document.getElementById(btnId);
-            if (box.classList.contains('show')) {
-                box.classList.remove('show');
-                btn.textContent = 'Más información';
-            } else {
-                box.classList.add('show');
-                btn.textContent = 'Menos información';
-            }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function setInputsDisabled(disabled) {
@@ -714,20 +834,112 @@
             }
         }
 
+        function renderDetailPanel(chunks, queryWords, panelId) {
+            let html = '<div class="detail-panel" id="' + panelId + '">';
+            html += '<h4>Fragmentos encontrados</h4>';
+
+            chunks.forEach((chunk, i) => {
+                const color = COLORS[i % COLORS.length];
+                const snippet = extractRelevantSnippet(chunk.text, queryWords);
+                html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
+                    '<div class="chunk-header"><span>' + escapeHtml(chunk.filename) + '</span><span>' + escapeHtml(chunk.folder) + '</span><span>' + escapeHtml(chunk.date) + '</span></div>' +
+                    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
+                    '</div>';
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        function addMessageToChat(question, answer, isLive, chunks) {
+            const chatArea = document.getElementById('chatArea');
+            const qaId = 'qa-' + Date.now();
+            const panelId = 'detail-' + qaId;
+            const btnId = 'btn-info-' + qaId;
+            const queryWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
+            const liveBadge = isLive ? '<span class="live-badge">Live</span>' : '';
+
+            const userHtml = '<div class="msg-row user" id="' + qaId + '-q">' +
+                '<div class="msg-bubble">' + liveBadge + escapeHtml(question) + '</div></div>';
+
+            const detailHtml = chunks && chunks.length > 0 ? renderDetailPanel(chunks, queryWords, panelId) : '';
+
+            const ansHtml = '<div class="msg-row assistant" id="' + qaId + '-a">' +
+                '<div class="msg-bubble">' + formatMarkdown(answer) +
+                '<div class="msg-meta">' +
+                '<button class="btn-info" id="' + btnId + '" onclick="toggleDetail(\'' + btnId + '\', \'' + panelId + '\')" title="Ver fuentes">i</button>' +
+                '</div>' +
+                detailHtml +
+                '</div></div>';
+
+            chatArea.insertAdjacentHTML('beforeend', userHtml + ansHtml);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            qaHistory.push({ id: qaId, question, answer, chunks, isLive, timestamp: new Date() });
+            updateHistoryPanel();
+
+            return qaId;
+        }
+
+        function toggleDetail(btnId, panelId) {
+            const panel = document.getElementById(panelId);
+            const btn = document.getElementById(btnId);
+            if (!panel || !btn) return;
+            if (panel.classList.contains('show')) {
+                panel.classList.remove('show');
+                btn.style.borderColor = '#444';
+                btn.style.color = '#888';
+            } else {
+                panel.classList.add('show');
+                btn.style.borderColor = '#0d7ee6';
+                btn.style.color = '#0d7ee6';
+            }
+        }
+
+        function toggleHistory() {
+            const historyPanel = document.getElementById('historyPanel');
+            const btn = document.getElementById('btnHistory');
+            const chatArea = document.getElementById('chatArea');
+
+            if (historyPanel.classList.contains('show')) {
+                historyPanel.classList.remove('show');
+                chatArea.style.display = 'flex';
+                btn.textContent = 'Consultar historial';
+            } else {
+                historyPanel.classList.add('show');
+                chatArea.style.display = 'none';
+                btn.textContent = 'Volver al chat';
+            }
+        }
+
+        function updateHistoryPanel() {
+            const panel = document.getElementById('historyPanel');
+            if (qaHistory.length === 0) {
+                panel.innerHTML = '<div class="no-results">No hay preguntas en el historial</div>';
+                return;
+            }
+
+            let html = '';
+            qaHistory.slice().reverse().forEach(item => {
+                const liveBadge = item.isLive ? '<span class="live-badge">Live</span>' : '';
+                html += '<div class="msg-row user"><div class="msg-bubble">' + liveBadge + escapeHtml(item.question) + '</div></div>';
+                html += '<div class="msg-row assistant"><div class="msg-bubble">' + formatMarkdown(item.answer) + '</div></div>';
+            });
+            panel.innerHTML = html;
+        }
+
         async function search() {
             const query = document.getElementById('query').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
-            const resultsEl = document.getElementById('results');
 
             if (!isAuthenticated) {
-                resultsEl.innerHTML = '<div class="qa-block"><div class="qa-answer"><strong>Acceso denegado</strong><p>Este documento contiene información confidencial. Solicita el código e intenta nuevamente.</p></div></div>';
-                resultsEl.classList.add('show');
+                addMessageToChat('', 'Acceso denegado. Este documento contiene información confidencial. Solicita el código e intenta nuevamente.', false, []);
                 return;
             }
 
             if (isAuthenticated && !query) {
-                resultsEl.innerHTML = '<div class="qa-block"><div class="qa-answer"><strong>¿Qué puedo investigar en este buscador?</strong><p>Este buscador te permite consultar información sobre <strong>decisiones, actas y procesos del grupo de astronomía Cúmulo</strong>. Puedes preguntar sobre reuniones, acuerdos, eventos, proyectos y cualquier documento relevante de la organización.</p></div></div>';
-                resultsEl.classList.add('show');
+                addMessageToChat('', 'Este buscador te permite consultar información sobre decisiones, actas y procesos del grupo de astronomía Cúmulo. Puedes preguntar sobre reuniones, acuerdos, eventos, proyectos y cualquier documento relevante de la organización.', false, []);
                 return;
             }
 
@@ -735,20 +947,18 @@
             isProcessing = true;
             setInputsDisabled(true);
 
-            const loadingId = 'loading-' + Date.now();
-            const loadingHtml = '<div class="loading-box show" id="' + loadingId + '"><div class="spinner"></div>Buscando...</div>';
-            resultsEl.classList.add('show');
-            resultsEl.insertAdjacentHTML('beforeend', loadingHtml);
+            document.getElementById('loadingBox').classList.add('show');
 
             try {
                 const relevantChunks = findRelevantChunks(query);
 
                 if (relevantChunks.length === 0) {
-                    document.getElementById(loadingId).remove();
-                    const noResult = '<div class="qa-block"><div class="qa-answer"><strong>No encontré documentos relevantes</strong><p>Intenta con otras palabras clave.</p></div></div>';
-                    resultsEl.insertAdjacentHTML('beforeend', noResult);
+                    document.getElementById('loadingBox').classList.remove('show');
+                    addMessageToChat(query, 'No encontré documentos relevantes. Intenta con otras palabras clave.', false, []);
                     isProcessing = false;
                     setInputsDisabled(false);
+                    document.getElementById('query').value = '';
+                    document.getElementById('query').focus();
                     return;
                 }
 
@@ -759,7 +969,7 @@
                 const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un análisis conciso basado en la información. Prioriza la información más reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un análisis breve (menos de 50 palabras) basado ÚNICAMENTE en los documentos\n2. Prioriza la información más reciente\n3. Si la información no está, di "No encontré información"';
 
                 const response = await fetch(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=' + apiKey,
+                    'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_CHAT_MODEL + ':generateContent?key=' + apiKey,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -780,43 +990,12 @@
 
                 answer = truncateToWords(answer, 50);
 
-                const answerHtml = formatMarkdown(answer);
-                const qaId = 'qa-' + Date.now();
-                const btnId = 'btn-more-' + qaId;
-                const boxId = 'detail-box-' + qaId;
-
-                const colors = ['#10b981', '#0d7ee6', '#f59e0b', '#8b5cf6', '#ec4899'];
-
-                let detailHtml = '<div class="detail-box" id="' + boxId + '">';
-                detailHtml += '<h4>Fragmentos encontrados</h4>';
-
-                relevantChunks.forEach((chunk, i) => {
-                    const color = colors[i % colors.length];
-                    const truncatedText = truncateToWords(chunk.text, 50);
-                    detailHtml += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
-                        '<div class="chunk-header"><span>' + chunk.filename + '</span><span>' + chunk.folder + '</span><span>' + chunk.date + '</span></div>' +
-                        '<div class="chunk-text">' + truncatedText.replace(/\n/g, '<br>') + '</div>' +
-                        '</div>';
-                });
-
-                detailHtml += '</div>';
-
-                const qaHtml = '<div class="qa-block" id="' + qaId + '">' +
-                    '<div class="qa-question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>' + escapeHtml(query) + '</div>' +
-                    '<div class="qa-answer"><strong>Respuesta</strong><p>' + answerHtml + '</p>' +
-                    '<button class="btn-more" id="' + btnId + '" onclick="toggleDetails(\'' + btnId + '\', \'' + boxId + '\')">Más información</button>' +
-                    detailHtml +
-                    '</div></div>';
-
-                document.getElementById(loadingId).remove();
-                resultsEl.insertAdjacentHTML('beforeend', qaHtml);
-
-                qaHistory.push({ id: qaId, question: query, answer: answer, chunks: relevantChunks, isLive: false });
+                document.getElementById('loadingBox').classList.remove('show');
+                addMessageToChat(query, answer, false, relevantChunks);
 
             } catch (error) {
-                document.getElementById(loadingId).remove();
-                const errHtml = '<div class="qa-block"><div class="qa-answer"><strong>Error</strong><p>' + escapeHtml(error.message) + '</p></div></div>';
-                resultsEl.insertAdjacentHTML('beforeend', errHtml);
+                document.getElementById('loadingBox').classList.remove('show');
+                addMessageToChat(query, 'Error: ' + error.message, false, []);
             }
 
             isProcessing = false;
@@ -825,180 +1004,273 @@
             document.getElementById('query').focus();
         }
 
+        // ─── LIVE MODE ───
+
         async function toggleLive() {
             const btnLive = document.getElementById('btnLive');
             const liveIndicator = document.getElementById('liveIndicator');
-            const queryInput = document.getElementById('query');
 
             if (!isAuthenticated) return;
 
             if (isLiveMode) {
-                // Desactivar live
-                isLiveMode = false;
-                btnLive.classList.remove('active');
-                btnLive.innerHTML = '<div class="live-dot"></div>Live';
-                liveIndicator.classList.remove('show');
-                if (liveRecognition) {
-                    liveRecognition.stop();
-                    liveRecognition = null;
-                }
+                stopLiveMode();
             } else {
-                // Activar live
-                isLiveMode = true;
-                btnLive.classList.add('active');
-                btnLive.innerHTML = '<div class="live-dot"></div>Detener';
-                liveIndicator.classList.add('show');
                 startLiveMode();
             }
         }
 
         async function startLiveMode() {
             const apiKey = document.getElementById('apiKey').value.trim();
-            const queryInput = document.getElementById('query');
+            const btnLive = document.getElementById('btnLive');
+            const liveIndicator = document.getElementById('liveIndicator');
+            const chatArea = document.getElementById('chatArea');
 
-            // Usar Web Speech API si está disponible
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                liveRecognition = new SpeechRecognition();
-                liveRecognition.lang = 'es-ES';
-                liveRecognition.continuous = true;
-                liveRecognition.interimResults = false;
+            isLiveMode = true;
+            btnLive.classList.add('active');
+            liveIndicator.classList.add('show');
 
-                liveRecognition.onresult = async (event) => {
-                    const transcript = event.results[event.results.length - 1][0].transcript.trim();
-                    if (transcript && !isProcessing) {
-                        queryInput.value = transcript;
-                        await processLiveQuery(transcript, apiKey);
-                    }
-                };
+            // Mostrar mensaje de inicio en el chat
+            const startMsg = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> Modo Live activo — Puedes hablar</div></div>';
+            chatArea.insertAdjacentHTML('beforeend', startMsg);
+            chatArea.scrollTop = chatArea.scrollHeight;
 
-                liveRecognition.onerror = (event) => {
-                    console.error('Speech recognition error:', event.error);
-                };
-
-                liveRecognition.start();
-            }
-
-            // También permitir escritura en vivo
-            queryInput.addEventListener('keypress', liveKeyHandler);
-        }
-
-        function liveKeyHandler(e) {
-            if (e.key === 'Enter' && isLiveMode) {
-                const query = document.getElementById('query').value.trim();
-                const apiKey = document.getElementById('apiKey').value.trim();
-                if (query && !isProcessing) {
-                    processLiveQuery(query, apiKey);
-                }
-            }
-        }
-
-        async function processLiveQuery(query, apiKey) {
-            const resultsEl = document.getElementById('results');
-
-            if (isProcessing) return;
-            isProcessing = true;
-            setInputsDisabled(true);
-
-            const loadingId = 'loading-' + Date.now();
-            const loadingHtml = '<div class="loading-box show" id="' + loadingId + '"><div class="spinner"></div>Buscando...</div>';
-            resultsEl.classList.add('show');
-            resultsEl.insertAdjacentHTML('beforeend', loadingHtml);
+            // Conectar WebSocket
+            const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
 
             try {
-                const relevantChunks = findRelevantChunks(query);
+                liveWs = new WebSocket(wsUrl);
 
-                if (relevantChunks.length === 0) {
-                    document.getElementById(loadingId).remove();
-                    const noResult = '<div class="qa-block"><div class="qa-answer live-mode"><strong>No encontré documentos relevantes</strong><p>Intenta con otras palabras clave.</p></div></div>';
-                    resultsEl.insertAdjacentHTML('beforeend', noResult);
-                    isProcessing = false;
-                    setInputsDisabled(false);
-                    return;
-                }
+                liveWs.onopen = () => {
+                    console.log('Live WebSocket connected');
+                    liveWs.send(JSON.stringify({
+                        setup: {
+                            model: 'models/' + GEMINI_LIVE_MODEL,
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: {
+                                            voiceName: "Puck"
+                                        }
+                                    }
+                                }
+                            },
+                            systemInstruction: {
+                                parts: [{ text: 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve y concisa.' }]
+                            }
+                        }
+                    }));
+                };
 
-                const context = relevantChunks
-                    .map(c => '[' + c.folder + ' - ' + c.date + ']\n' + c.text)
-                    .join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+                liveWs.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    console.log('Live response:', response);
 
-                const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un análisis conciso basado en la información. Prioriza la información más reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un análisis breve (menos de 50 palabras) basado ÚNICAMENTE en los documentos\n2. Prioriza la información más reciente\n3. Si la información no está, di "No encontré información"';
-
-                const response = await fetch(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-live-preview:generateContent?key=' + apiKey,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }]
-                        })
+                    if (response.setupComplete) {
+                        console.log('Live setup complete');
+                        startMicrophoneCapture();
                     }
-                );
 
-                const data = await response.json();
+                    if (response.serverContent) {
+                        const sc = response.serverContent;
 
-                if (!response.ok) {
-                    throw new Error((data.error && data.error.message) || 'Error');
-                }
+                        // Transcripción de entrada (lo que dijo el usuario)
+                        if (sc.inputTranscription && sc.inputTranscription.text) {
+                            const userText = sc.inputTranscription.text.trim();
+                            if (userText && currentLiveAnswerId === null) {
+                                currentLiveAnswerId = 'live-' + Date.now();
+                                const userHtml = '<div class="msg-row user" id="' + currentLiveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(userText) + '</div></div>';
+                                chatArea.insertAdjacentHTML('beforeend', userHtml);
+                                chatArea.scrollTop = chatArea.scrollHeight;
+                            }
+                        }
 
-                let answer = (data.candidates && data.candidates[0] &&
-                    data.candidates[0].content.parts[0].text) || 'No pude generar respuesta';
+                        // Transcripción de salida (respuesta del modelo)
+                        if (sc.outputTranscription && sc.outputTranscription.text) {
+                            const modelText = sc.outputTranscription.text.trim();
+                            if (modelText && currentLiveAnswerId) {
+                                // Buscar o crear el bubble de respuesta
+                                let ansEl = document.getElementById(currentLiveAnswerId + '-a');
+                                if (!ansEl) {
+                                    const ansHtml = '<div class="msg-row assistant" id="' + currentLiveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span>' + formatMarkdown(modelText) + '</div></div>';
+                                    chatArea.insertAdjacentHTML('beforeend', ansHtml);
+                                } else {
+                                    const bubble = ansEl.querySelector('.msg-bubble');
+                                    bubble.innerHTML = '<span class="live-badge">Live</span>' + formatMarkdown(modelText);
+                                }
+                                chatArea.scrollTop = chatArea.scrollHeight;
+                            }
+                        }
 
-                answer = truncateToWords(answer, 50);
+                        // Turn complete → guardar en historial
+                        if (sc.turnComplete && currentLiveAnswerId) {
+                            const qEl = document.getElementById(currentLiveAnswerId + '-q');
+                            const aEl = document.getElementById(currentLiveAnswerId + '-a');
+                            if (qEl && aEl) {
+                                const qText = qEl.querySelector('.msg-bubble').textContent.replace('Live', '').trim();
+                                const aText = aEl.querySelector('.msg-bubble').textContent.replace('Live', '').trim();
+                                qaHistory.push({ id: currentLiveAnswerId, question: qText, answer: aText, chunks: [], isLive: true, timestamp: new Date() });
+                                updateHistoryPanel();
+                            }
+                            currentLiveAnswerId = null;
+                        }
 
-                const answerHtml = formatMarkdown(answer);
-                const qaId = 'qa-live-' + Date.now();
-                const btnId = 'btn-more-' + qaId;
-                const boxId = 'detail-box-' + qaId;
+                        // Audio output
+                        if (sc.modelTurn && sc.modelTurn.parts) {
+                            for (const part of sc.modelTurn.parts) {
+                                if (part.inlineData && part.inlineData.data) {
+                                    playAudio(part.inlineData.data);
+                                }
+                            }
+                        }
+                    }
+                };
 
-                const colors = ['#10b981', '#0d7ee6', '#f59e0b', '#8b5cf6', '#ec4899'];
+                liveWs.onerror = (error) => {
+                    console.error('Live WebSocket error:', error);
+                    const errHtml = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> Error de conexión en modo Live</div></div>';
+                    chatArea.insertAdjacentHTML('beforeend', errHtml);
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                    stopLiveMode();
+                };
 
-                let detailHtml = '<div class="detail-box" id="' + boxId + '">';
-                detailHtml += '<h4>Fragmentos encontrados</h4>';
+                liveWs.onclose = () => {
+                    console.log('Live WebSocket closed');
+                    if (isLiveMode) stopLiveMode();
+                };
 
-                relevantChunks.forEach((chunk, i) => {
-                    const color = colors[i % colors.length];
-                    const truncatedText = truncateToWords(chunk.text, 50);
-                    detailHtml += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
-                        '<div class="chunk-header"><span>' + chunk.filename + '</span><span>' + chunk.folder + '</span><span>' + chunk.date + '</span></div>' +
-                        '<div class="chunk-text">' + truncatedText.replace(/\n/g, '<br>') + '</div>' +
-                        '</div>';
-                });
-
-                detailHtml += '</div>';
-
-                const qaHtml = '<div class="qa-block" id="' + qaId + '">' +
-                    '<div class="qa-question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span style="color:#ff6b6b;font-weight:500;">[Live]</span> ' + escapeHtml(query) + '</div>' +
-                    '<div class="qa-answer live-mode"><strong>Respuesta</strong><p>' + answerHtml + '</p>' +
-                    '<button class="btn-more" id="' + btnId + '" onclick="toggleDetails(\'' + btnId + '\', \'' + boxId + '\')">Más información</button>' +
-                    detailHtml +
-                    '</div></div>';
-
-                document.getElementById(loadingId).remove();
-                resultsEl.insertAdjacentHTML('beforeend', qaHtml);
-
-                qaHistory.push({ id: qaId, question: query, answer: answer, chunks: relevantChunks, isLive: true });
-
-            } catch (error) {
-                document.getElementById(loadingId).remove();
-                const errHtml = '<div class="qa-block"><div class="qa-answer live-mode"><strong>Error</strong><p>' + escapeHtml(error.message) + '</p></div></div>';
-                resultsEl.insertAdjacentHTML('beforeend', errHtml);
+            } catch (e) {
+                console.error('Error starting live mode:', e);
+                stopLiveMode();
             }
-
-            isProcessing = false;
-            setInputsDisabled(false);
-            document.getElementById('query').value = '';
-            document.getElementById('query').focus();
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function stopLiveMode() {
+            isLiveMode = false;
+            const btnLive = document.getElementById('btnLive');
+            const liveIndicator = document.getElementById('liveIndicator');
+
+            btnLive.classList.remove('active');
+            liveIndicator.classList.remove('show');
+
+            if (liveWs) {
+                liveWs.close();
+                liveWs = null;
+            }
+
+            if (liveMediaStream) {
+                liveMediaStream.getTracks().forEach(t => t.stop());
+                liveMediaStream = null;
+            }
+
+            if (liveAudioContext) {
+                liveAudioContext.close();
+                liveAudioContext = null;
+            }
+
+            currentLiveAnswerId = null;
+        }
+
+        async function startMicrophoneCapture() {
+            try {
+                liveMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                liveAudioContext = new AudioContext({ sampleRate: 16000 });
+                const source = liveAudioContext.createMediaStreamSource(liveMediaStream);
+
+                // Crear ScriptProcessor para capturar audio PCM
+                const bufferSize = 4096;
+                const processor = liveAudioContext.createScriptProcessor(bufferSize, 1, 1);
+
+                processor.onaudioprocess = (e) => {
+                    if (!isLiveMode || !liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    // Convertir float32 a int16 PCM
+                    const pcmData = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                    }
+
+                    const base64 = arrayBufferToBase64(pcmData.buffer);
+                    liveWs.send(JSON.stringify({
+                        realtimeInput: {
+                            audio: {
+                                data: base64,
+                                mimeType: 'audio/pcm;rate=16000'
+                            }
+                        }
+                    }));
+                };
+
+                source.connect(processor);
+                processor.connect(liveAudioContext.destination);
+                liveAudioWorklet = processor;
+
+            } catch (e) {
+                console.error('Error accessing microphone:', e);
+                const chatArea = document.getElementById('chatArea');
+                const errHtml = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> No se pudo acceder al micrófono. Verifica los permisos.</div></div>';
+                chatArea.insertAdjacentHTML('beforeend', errHtml);
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+        }
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function playAudio(base64Data) {
+            try {
+                const audioData = atob(base64Data);
+                const arrayBuffer = new ArrayBuffer(audioData.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < audioData.length; i++) {
+                    view[i] = audioData.charCodeAt(i);
+                }
+
+                const audioCtx = new AudioContext({ sampleRate: 24000 });
+                audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioCtx.destination);
+                    source.start();
+                }, (e) => {
+                    console.error('Error decoding audio:', e);
+                });
+            } catch (e) {
+                console.error('Error playing audio:', e);
+            }
+        }
+
+        // También permitir enviar texto en modo live
+        async function sendLiveText(text) {
+            if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+
+            liveWs.send(JSON.stringify({
+                realtimeInput: {
+                    text: text
+                }
+            }));
         }
 
         window.addEventListener('load', loadKB);
         document.getElementById('query').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !isLiveMode) search();
+            if (e.key === 'Enter') {
+                if (isLiveMode) {
+                    const text = document.getElementById('query').value.trim();
+                    if (text) {
+                        sendLiveText(text);
+                        document.getElementById('query').value = '';
+                    }
+                } else {
+                    search();
+                }
+            }
         });
     </script>
 </body>
