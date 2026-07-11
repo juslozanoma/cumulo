@@ -641,52 +641,49 @@
         const COLORS = ['#10b981', '#0d7ee6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
         async function loadKB() {
-            try {
-                const res = await fetch('kb.json');
-                knowledgeBase = await res.json();
-                console.log('Cargados ' + knowledgeBase.length + ' chunks');
-            } catch (e) {
-                console.error('Error cargando KB:', e);
-            }
-        }
+    try {
+        const res = await fetch('kb.json');
+        const documents = await res.json();
+        // Nuevo formato: aplanar chunks de documentos anidados
+        knowledgeBase = documents.flatMap(doc => 
+            doc.chunks.map(chunk => ({
+                ...chunk,
+                _doc: doc  // referencia al documento padre
+            }))
+        );
+        console.log('Cargados ' + documents.length + ' documentos, ' + knowledgeBase.length + ' chunks');
+    } catch (e) {
+        console.error('Error cargando KB:', e);
+    }
+}
 
 function findRelevantChunks(query) {
     const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (queryWords.length === 0) return [];
 
-    // Aplanar: extraer todos los chunks de todos los documentos
-    // y enriquecerlos con metadatos del documento padre
-    const allChunks = knowledgeBase.flatMap(doc => {
-        return doc.chunks.map(chunk => ({
-            ...chunk,
-            // Campos heredados del documento padre para compatibilidad
-            _docType: doc.document_type,
-            _committee: doc.committee,
-            _filename: doc.file?.name || '',
-            _date: doc.dates?.start || null,
-            _status: doc.status,
-            _keywords: doc.keywords || [],
-        }));
-    });
-
-    return allChunks
+    return knowledgeBase
         .map(chunk => {
             let score = 0;
             const text = (chunk.text || '').toLowerCase();
-            const filename = (chunk._filename || '').toLowerCase();
+            const doc = chunk._doc;
+            const filename = (doc.file?.name || '').toLowerCase();
             const section = (chunk.section || '').toLowerCase();
+            const docType = (doc.document_type || '').toLowerCase();
+            const committee = (doc.committee || '').toLowerCase();
 
             queryWords.forEach(word => {
                 const matches = (text.match(new RegExp(word, 'g')) || []).length;
                 score += matches;
                 if (filename.includes(word)) score += 5;
                 if (section.includes(word)) score += 3;
-                // Bonus si la palabra está en keywords del documento
-                if (chunk._keywords.some(kw => kw.toLowerCase().includes(word))) score += 2;
+                if (docType.includes(word)) score += 4;
+                if (committee.includes(word)) score += 4;
+                if ((doc.keywords || []).some(kw => kw.toLowerCase().includes(word))) score += 2;
             });
 
-            // Puntaje por fecha del documento padre
-            if (chunk._date) {
-                const dateVal = new Date(chunk._date).getTime();
+            const dateStr = doc.dates?.start;
+            if (dateStr) {
+                const dateVal = new Date(dateStr).getTime();
                 if (!isNaN(dateVal)) {
                     const now = Date.now();
                     const daysDiff = (now - dateVal) / (1000 * 60 * 60 * 24);
@@ -841,10 +838,11 @@ function findRelevantChunks(query) {
             chunks.forEach((chunk, i) => {
                 const color = COLORS[i % COLORS.length];
                 const snippet = extractRelevantSnippet(chunk.text, queryWords);
-                html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
-                    '<div class="chunk-header"><span>' + escapeHtml(chunk.filename) + '</span><span>' + escapeHtml(chunk.folder) + '</span><span>' + escapeHtml(chunk.date) + '</span></div>' +
-                    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
-                    '</div>';
+                const doc = chunk._doc;
+html += '<div class="detail-chunk" style="border-left-color:' + color + '">' +
+    '<div class="chunk-header"><span>' + escapeHtml(doc.file?.name || 'desconocido') + '</span><span>' + escapeHtml(doc.committee || 'general') + '</span><span>' + escapeHtml(doc.dates?.start || 'sin fecha') + '</span></div>' +
+    '<div class="chunk-text">' + escapeHtml(snippet).replace(/\n/g, '<br>') + '</div>' +
+    '</div>';
             });
 
             html += '</div>';
@@ -950,9 +948,19 @@ function findRelevantChunks(query) {
                     return;
                 }
 
-                const context = relevantChunks
-                    .map(c => '[' + c.folder + ' - ' + c.date + ']\n' + c.text)
-                    .join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
+                const context = relevantChunks.map(chunk => {
+    const doc = chunk._doc;
+    const parts = [];
+    parts.push('📄 ' + doc.document_id + ' | ' + doc.document_type.toUpperCase() + ' | ' + doc.committee);
+    parts.push('📅 Fecha: ' + (doc.dates?.start || 'sin fecha') + ' | Estado: ' + doc.status);
+    if (doc.participants?.length > 0) {
+        parts.push('👥 Participantes: ' + doc.participants.map(p => p.name + ' (' + p.role + ')').join(', '));
+    }
+    parts.push('📝 Sección: ' + (chunk.section || 'contenido general'));
+    parts.push('');
+    parts.push(chunk.text);
+    return parts.join('\n');
+}).join('\n\n---DOCUMENTO SIGUIENTE---\n\n');
 
                 const prompt = 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Analiza los documentos proporcionados y responde de forma breve (menos de 50 palabras) como un análisis conciso basado en la información. Prioriza la información más reciente si hay datos repetidos.\n\nDOCUMENTOS RELEVANTES:\n' + context + '\n\nPREGUNTA DEL USUARIO: ' + query + '\n\nINSTRUCCIONES:\n1. Responde con un análisis breve (menos de 50 palabras) basado ÚNICAMENTE en los documentos\n2. Prioriza la información más reciente\n3. Si la información no está, di "No encontré información"';
 
