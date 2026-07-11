@@ -13,12 +13,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { query, context } = req.body;
+  const { query, context, mode } = req.body;
 
+  // Modo Live: el contexto ya viene enriquecido desde el frontend
+  // Modo Chat: el contexto también viene del frontend (findRelevantChunks)
   const prompt = `Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo.
 
 DOCUMENTOS RELEVANTES:
-${context}
+${context || 'No se encontraron documentos relevantes.'}
 
 PREGUNTA DEL USUARIO: ${query}
 
@@ -27,11 +29,14 @@ INSTRUCCIONES:
 2. Si la informacion no esta en los documentos, di claramente "No encontre informacion sobre esto en los documentos"
 3. Se preciso sobre fechas, decisiones y personas mencionadas
 4. Si hay decisiones anuladas o actualizadas, menciona ambas versiones
-5. Estructura tu respuesta de forma clara y facil de leer`;
+5. Estructura tu respuesta de forma clara y facil de leer
+6. ${mode === 'live' ? 'Responde de forma extremadamente breve y concisa (máximo 30 palabras), como en una conversación de voz.' : 'Responde con un analisis breve (menos de 50 palabras).'}`;
 
   try {
+    const model = mode === 'live' ? 'gemini-3.1-flash-live-preview' : 'gemini-3.1-flash-lite';
+    
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' +
+      'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' +
       process.env.GEMINI_API_KEY,
       {
         method: 'POST',
