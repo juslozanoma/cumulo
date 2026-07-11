@@ -206,7 +206,7 @@
 
     <script>
         let knowledgeBase = [];
-        const API_URL = 'https://juslozanoma-6059.vercel.app/api/search';
+        const API_URL = 'https://api.allorigins.win/raw?url=https%3A%2F%2Fjuslozanoma-6059.vercel.app%2Fapi%2Fsearch';
 
         async function loadKB() {
             try {
@@ -267,7 +267,9 @@
 
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ query, context })
                 });
 
