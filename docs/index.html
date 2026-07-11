@@ -650,39 +650,59 @@
             }
         }
 
-        function findRelevantChunks(query) {
-            const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+function findRelevantChunks(query) {
+    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
-            return knowledgeBase
-                .map(chunk => {
-                    let score = 0;
-                    const text = chunk.text.toLowerCase();
-                    const filename = chunk.filename.toLowerCase();
+    // Aplanar: extraer todos los chunks de todos los documentos
+    // y enriquecerlos con metadatos del documento padre
+    const allChunks = knowledgeBase.flatMap(doc => {
+        return doc.chunks.map(chunk => ({
+            ...chunk,
+            // Campos heredados del documento padre para compatibilidad
+            _docType: doc.document_type,
+            _committee: doc.committee,
+            _filename: doc.file?.name || '',
+            _date: doc.dates?.start || null,
+            _status: doc.status,
+            _keywords: doc.keywords || [],
+        }));
+    });
 
-                    queryWords.forEach(word => {
-                        const matches = (text.match(new RegExp(word, 'g')) || []).length;
-                        score += matches;
-                        if (filename.includes(word)) score += 5;
-                    });
+    return allChunks
+        .map(chunk => {
+            let score = 0;
+            const text = (chunk.text || '').toLowerCase();
+            const filename = (chunk._filename || '').toLowerCase();
+            const section = (chunk.section || '').toLowerCase();
 
-                    if (chunk.date) {
-                        const dateVal = new Date(chunk.date).getTime();
-                        if (!isNaN(dateVal)) {
-                            const now = Date.now();
-                            const daysDiff = (now - dateVal) / (1000 * 60 * 60 * 24);
-                            if (daysDiff < 365) score += 3;
-                            if (daysDiff < 90) score += 5;
-                            if (daysDiff < 30) score += 8;
-                        }
-                    }
+            queryWords.forEach(word => {
+                const matches = (text.match(new RegExp(word, 'g')) || []).length;
+                score += matches;
+                if (filename.includes(word)) score += 5;
+                if (section.includes(word)) score += 3;
+                // Bonus si la palabra está en keywords del documento
+                if (chunk._keywords.some(kw => kw.toLowerCase().includes(word))) score += 2;
+            });
 
-                    return { chunk, score };
-                })
-                .filter(x => x.score > 0)
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 5)
-                .map(x => x.chunk);
-        }
+            // Puntaje por fecha del documento padre
+            if (chunk._date) {
+                const dateVal = new Date(chunk._date).getTime();
+                if (!isNaN(dateVal)) {
+                    const now = Date.now();
+                    const daysDiff = (now - dateVal) / (1000 * 60 * 60 * 24);
+                    if (daysDiff < 365) score += 3;
+                    if (daysDiff < 90) score += 5;
+                    if (daysDiff < 30) score += 8;
+                }
+            }
+
+            return { chunk, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(x => x.chunk);
+}
 
         function extractRelevantSnippet(chunkText, queryWords) {
             const text = chunkText.toLowerCase();
