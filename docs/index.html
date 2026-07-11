@@ -11,15 +11,20 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #0a0e17;
             color: #e0e0e0;
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            overflow: hidden;
         }
 
         .container {
@@ -30,6 +35,7 @@
             flex-direction: column;
             height: 100vh;
             max-height: 900px;
+            overflow: hidden;
         }
 
         .logo {
@@ -55,6 +61,11 @@
             align-items: center;
             margin-bottom: 16px;
             flex-shrink: 0;
+            transition: margin 0.2s ease;
+        }
+
+        .api-row.collapsed {
+            margin-bottom: 0;
         }
 
         .api-setup {
@@ -82,7 +93,7 @@
         }
 
         .api-setup input::placeholder {
-            color: #666;
+            color: #7c8494;
         }
 
         .btn-auth {
@@ -121,6 +132,7 @@
             border-left: 3px solid #0d7ee6;
             color: #aaa;
             font-size: 14px;
+            flex-shrink: 0;
         }
 
         .auth-loading.show {
@@ -154,6 +166,7 @@
             justify-content: center;
             gap: 10px;
             animation: fadeIn 0.4s ease-out;
+            flex-shrink: 0;
         }
 
         .api-success.show {
@@ -180,6 +193,7 @@
             justify-content: center;
             gap: 10px;
             animation: fadeIn 0.4s ease-out;
+            flex-shrink: 0;
         }
 
         .api-error.show {
@@ -230,6 +244,19 @@
 
         .msg-row.assistant {
             flex-direction: row;
+        }
+
+        .msg-row.system {
+            justify-content: center;
+        }
+
+        .msg-row.system .msg-bubble {
+            background: transparent;
+            border: 1px dashed #333;
+            color: #8a93a6;
+            font-size: 12px;
+            padding: 8px 14px;
+            border-radius: 20px;
         }
 
         .msg-bubble {
@@ -378,6 +405,17 @@
             vertical-align: middle;
         }
 
+        .listening-bubble {
+            font-style: italic;
+            color: #aaa !important;
+            animation: pulseOpacity 1.4s ease-in-out infinite;
+        }
+
+        @keyframes pulseOpacity {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
         .search-box {
             position: relative;
             display: flex;
@@ -390,21 +428,22 @@
         #query {
             flex: 1;
             padding: 14px 16px;
-            background: #14181f;
-            border: 1px solid #2a2f3a;
+            background: #0c0f16;
+            border: 1px solid #3a4257;
             border-radius: 10px;
-            color: #fff;
+            color: #ffffff;
             font-size: 15px;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         #query:focus {
             outline: none;
-            border-color: #0d7ee6;
+            border-color: #3b9eff;
+            box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.15);
         }
 
         #query::placeholder {
-            color: #666;
+            color: #8891a5;
         }
 
         #query:disabled {
@@ -412,13 +451,13 @@
             cursor: not-allowed;
         }
 
-        #searchBtn {
-            width: 42px;
-            height: 42px;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            color: #888;
+        #searchBtn, .btn-live {
+            width: 44px;
+            height: 44px;
+            background: #161b26;
+            border: 1px solid #2f3646;
+            border-radius: 10px;
+            color: #c6cede;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -428,8 +467,9 @@
         }
 
         #searchBtn:hover {
-            background: #1f2530;
-            color: #0d7ee6;
+            background: #1f2938;
+            color: #3b9eff;
+            border-color: #3b9eff;
         }
 
         #searchBtn:disabled {
@@ -442,24 +482,10 @@
             height: 18px;
         }
 
-        .btn-live {
-            width: 42px;
-            height: 42px;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            color: #888;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
         .btn-live:hover {
-            background: #1f2530;
-            color: #10b981;
+            background: #1f2938;
+            color: #22c58b;
+            border-color: #22c58b;
         }
 
         .btn-live:disabled {
@@ -468,12 +494,13 @@
         }
 
         .btn-live.active {
-            background: #1a2f1a;
-            color: #ff6b6b;
+            background: #3a1414;
+            border-color: #ff5252;
+            color: #ff5252;
         }
 
         .btn-live.active:hover {
-            background: #2a1a1a;
+            background: #3a1414;
         }
 
         .btn-live svg {
@@ -481,35 +508,18 @@
             height: 20px;
         }
 
-        .live-indicator {
-            display: none;
-            align-items: center;
-            gap: 8px;
-            background: #2a1a1a;
-            padding: 10px 14px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            border-left: 3px solid #ff6b6b;
-            color: #ff6b6b;
-            font-size: 13px;
-            flex-shrink: 0;
-        }
-
-        .live-indicator.show {
-            display: flex;
-        }
-
-        .live-indicator .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #ff6b6b;
+        .live-rec-dot {
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
+            background: #ff3b3b;
+            animation: liveBlink 1s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+        @keyframes liveBlink {
+            0% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 59, 59, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); }
         }
 
         @keyframes slideIn {
@@ -525,52 +535,11 @@
             padding: 20px;
             color: #888;
             font-size: 14px;
+            flex-shrink: 0;
         }
 
         .loading-box.show {
             display: flex;
-        }
-
-        .btn-history {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background: transparent;
-            border: 1px solid #2a2f3a;
-            border-radius: 8px;
-            color: #888;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex-shrink: 0;
-            margin-bottom: 12px;
-        }
-
-        .btn-history:hover {
-            border-color: #0d7ee6;
-            color: #0d7ee6;
-        }
-
-        .history-panel {
-            display: none;
-            flex-direction: column;
-            gap: 12px;
-            padding: 8px 4px;
-            overflow-y: auto;
-            max-height: 300px;
-        }
-
-        .history-panel.show {
-            display: flex;
-        }
-
-        .history-panel::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .history-panel::-webkit-scrollbar-thumb {
-            background: #2a2f3a;
-            border-radius: 4px;
         }
 
         .no-results {
@@ -621,9 +590,21 @@
             Acceso denegado
         </div>
 
-        <div class="live-indicator" id="liveIndicator">
-            <div class="live-dot"></div>
-            Modo Live activo — Puedes hablar
+        <div class="search-box" id="searchBox">
+            <input type="text" id="query" placeholder="Escribe tu pregunta aquí" disabled>
+            <button id="searchBtn" onclick="handleSubmit()" aria-label="Buscar" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+            <button class="btn-live" id="btnLive" onclick="toggleLive()" disabled aria-label="Live">
+                <svg id="liveIconHeadset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                </svg>
+                <span id="liveIconActive" class="live-rec-dot" style="display:none;"></span>
+            </button>
         </div>
 
         <div class="chat-area" id="chatArea"></div>
@@ -632,26 +613,6 @@
             <div class="spinner"></div>
             Buscando...
         </div>
-
-        <button class="btn-history" id="btnHistory" onclick="toggleHistory()">Consultar historial</button>
-
-        <div class="history-panel" id="historyPanel"></div>
-
-        <div class="search-box">
-            <input type="text" id="query" placeholder="Pregunta sobre decisiones, actas o procesos de Cumulo" disabled>
-            <button id="searchBtn" onclick="search()" aria-label="Buscar" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-            </button>
-            <button class="btn-live" id="btnLive" onclick="toggleLive()" disabled aria-label="Live">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
-                </svg>
-            </button>
-        </div>
     </div>
 
     <script>
@@ -659,12 +620,21 @@
         let isAuthenticated = false;
         let isLiveMode = false;
         let qaHistory = [];
-        let liveWs = null;
         let isProcessing = false;
-        let currentLiveAnswerId = null;
-        let liveAudioContext = null;
+        let chatModeActive = false;
+
+        // ─── Estado del modo Live ───
+        let liveWs = null;
+        let liveAudioContext = null;      // captura de micrófono
         let liveMediaStream = null;
         let liveAudioWorklet = null;
+        let liveOutputCtx = null;         // reproducción de audio del modelo
+        let liveNextStartTime = 0;
+        let liveActiveSources = [];
+        let liveAnswerId = null;
+        let liveInputBuffer = '';
+        let liveOutputBuffer = '';
+        let liveListeningBubbleId = null;
 
         const GEMINI_CHAT_MODEL = 'gemini-3.1-flash-lite';
         const GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
@@ -795,6 +765,15 @@
             document.getElementById('btnAuth').disabled = disabled;
         }
 
+        // ─── Transición al modo chat: mueve el buscador al final y oculta el aviso de autenticación ───
+        function ensureChatMode() {
+            if (chatModeActive) return;
+            chatModeActive = true;
+            document.getElementById('apiSuccess').classList.remove('show');
+            const searchBox = document.getElementById('searchBox');
+            document.querySelector('.container').appendChild(searchBox);
+        }
+
         async function authenticate() {
             const apiKey = document.getElementById('apiKey').value.trim();
             const authLoading = document.getElementById('authLoading');
@@ -822,10 +801,11 @@
                 isAuthenticated = true;
                 apiSetup.classList.add('hidden');
                 document.getElementById('btnAuth').style.display = 'none';
-                apiRow.style.justifyContent = 'center';
+                apiRow.classList.add('collapsed');
                 apiSuccess.classList.add('show');
                 apiError.classList.remove('show');
                 setInputsDisabled(false);
+                document.getElementById('query').focus();
             } else {
                 apiError.classList.add('show');
                 apiSuccess.classList.remove('show');
@@ -852,6 +832,7 @@
         }
 
         function addMessageToChat(question, answer, isLive, chunks) {
+            ensureChatMode();
             const chatArea = document.getElementById('chatArea');
             const qaId = 'qa-' + Date.now();
             const panelId = 'detail-' + qaId;
@@ -877,9 +858,16 @@
             chatArea.scrollTop = chatArea.scrollHeight;
 
             qaHistory.push({ id: qaId, question, answer, chunks, isLive, timestamp: new Date() });
-            updateHistoryPanel();
 
             return qaId;
+        }
+
+        function addSystemMessage(text) {
+            ensureChatMode();
+            const chatArea = document.getElementById('chatArea');
+            const html = '<div class="msg-row system"><div class="msg-bubble">' + escapeHtml(text) + '</div></div>';
+            chatArea.insertAdjacentHTML('beforeend', html);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function toggleDetail(btnId, panelId) {
@@ -897,36 +885,16 @@
             }
         }
 
-        function toggleHistory() {
-            const historyPanel = document.getElementById('historyPanel');
-            const btn = document.getElementById('btnHistory');
-            const chatArea = document.getElementById('chatArea');
-
-            if (historyPanel.classList.contains('show')) {
-                historyPanel.classList.remove('show');
-                chatArea.style.display = 'flex';
-                btn.textContent = 'Consultar historial';
+        function handleSubmit() {
+            if (isLiveMode) {
+                const text = document.getElementById('query').value.trim();
+                if (text) {
+                    sendLiveText(text);
+                    document.getElementById('query').value = '';
+                }
             } else {
-                historyPanel.classList.add('show');
-                chatArea.style.display = 'none';
-                btn.textContent = 'Volver al chat';
+                search();
             }
-        }
-
-        function updateHistoryPanel() {
-            const panel = document.getElementById('historyPanel');
-            if (qaHistory.length === 0) {
-                panel.innerHTML = '<div class="no-results">No hay preguntas en el historial</div>';
-                return;
-            }
-
-            let html = '';
-            qaHistory.slice().reverse().forEach(item => {
-                const liveBadge = item.isLive ? '<span class="live-badge">Live</span>' : '';
-                html += '<div class="msg-row user"><div class="msg-bubble">' + liveBadge + escapeHtml(item.question) + '</div></div>';
-                html += '<div class="msg-row assistant"><div class="msg-bubble">' + formatMarkdown(item.answer) + '</div></div>';
-            });
-            panel.innerHTML = html;
         }
 
         async function search() {
@@ -1006,10 +974,44 @@
 
         // ─── LIVE MODE ───
 
-        async function toggleLive() {
+        function updateLiveButtonUI(active) {
             const btnLive = document.getElementById('btnLive');
-            const liveIndicator = document.getElementById('liveIndicator');
+            const headsetIcon = document.getElementById('liveIconHeadset');
+            const activeIcon = document.getElementById('liveIconActive');
+            if (active) {
+                btnLive.classList.add('active');
+                headsetIcon.style.display = 'none';
+                activeIcon.style.display = 'block';
+                btnLive.setAttribute('aria-label', 'Detener Live');
+            } else {
+                btnLive.classList.remove('active');
+                headsetIcon.style.display = 'block';
+                activeIcon.style.display = 'none';
+                btnLive.setAttribute('aria-label', 'Live');
+            }
+        }
 
+        function showListeningBubble() {
+            removeListeningBubble();
+            ensureChatMode();
+            const chatArea = document.getElementById('chatArea');
+            const id = 'listening-' + Date.now();
+            liveListeningBubbleId = id;
+            const html = '<div class="msg-row user" id="' + id + '">' +
+                '<div class="msg-bubble listening-bubble"><span class="live-badge">Live</span>Escuchando...</div></div>';
+            chatArea.insertAdjacentHTML('beforeend', html);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function removeListeningBubble() {
+            if (liveListeningBubbleId) {
+                const el = document.getElementById(liveListeningBubbleId);
+                if (el) el.remove();
+                liveListeningBubbleId = null;
+            }
+        }
+
+        async function toggleLive() {
             if (!isAuthenticated) return;
 
             if (isLiveMode) {
@@ -1021,20 +1023,16 @@
 
         async function startLiveMode() {
             const apiKey = document.getElementById('apiKey').value.trim();
-            const btnLive = document.getElementById('btnLive');
-            const liveIndicator = document.getElementById('liveIndicator');
-            const chatArea = document.getElementById('chatArea');
 
             isLiveMode = true;
-            btnLive.classList.add('active');
-            liveIndicator.classList.add('show');
+            updateLiveButtonUI(true);
+            liveInputBuffer = '';
+            liveOutputBuffer = '';
+            liveAnswerId = null;
 
-            // Mostrar mensaje de inicio en el chat
-            const startMsg = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> Modo Live activo — Puedes hablar</div></div>';
-            chatArea.insertAdjacentHTML('beforeend', startMsg);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            addSystemMessage('Modo Live activo — Puedes hablar en voz alta');
 
-            // Conectar WebSocket
+            // Conectar WebSocket (endpoint v1beta, autenticación por API key en la URL)
             const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + apiKey;
 
             try {
@@ -1053,7 +1051,11 @@
                                             voiceName: "Puck"
                                         }
                                     }
-                                }
+                                },
+                                // Sin esto, el servidor nunca envía inputTranscription/outputTranscription
+                                // (era la causa principal de que el modo Live no mostrara nada en el chat)
+                                inputAudioTranscription: {},
+                                outputAudioTranscription: {}
                             },
                             systemInstruction: {
                                 parts: [{ text: 'Eres un asistente experto en los procesos, decisiones y documentos del grupo de astronomia Cumulo. Responde de forma breve y concisa.' }]
@@ -1069,57 +1071,64 @@
                     if (response.setupComplete) {
                         console.log('Live setup complete');
                         startMicrophoneCapture();
+                        showListeningBubble();
                     }
 
                     if (response.serverContent) {
                         const sc = response.serverContent;
+                        const chatArea = document.getElementById('chatArea');
 
-                        // Transcripción de entrada (lo que dijo el usuario)
-                        if (sc.inputTranscription && sc.inputTranscription.text) {
-                            const userText = sc.inputTranscription.text.trim();
-                            if (userText && currentLiveAnswerId === null) {
-                                currentLiveAnswerId = 'live-' + Date.now();
-                                const userHtml = '<div class="msg-row user" id="' + currentLiveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(userText) + '</div></div>';
-                                chatArea.insertAdjacentHTML('beforeend', userHtml);
-                                chatArea.scrollTop = chatArea.scrollHeight;
-                            }
+                        // El usuario interrumpió al modelo: cortar la reproducción en curso
+                        if (sc.interrupted) {
+                            stopAllLiveAudio();
                         }
 
-                        // Transcripción de salida (respuesta del modelo)
-                        if (sc.outputTranscription && sc.outputTranscription.text) {
-                            const modelText = sc.outputTranscription.text.trim();
-                            if (modelText && currentLiveAnswerId) {
-                                // Buscar o crear el bubble de respuesta
-                                let ansEl = document.getElementById(currentLiveAnswerId + '-a');
-                                if (!ansEl) {
-                                    const ansHtml = '<div class="msg-row assistant" id="' + currentLiveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span>' + formatMarkdown(modelText) + '</div></div>';
-                                    chatArea.insertAdjacentHTML('beforeend', ansHtml);
-                                } else {
-                                    const bubble = ansEl.querySelector('.msg-bubble');
-                                    bubble.innerHTML = '<span class="live-badge">Live</span>' + formatMarkdown(modelText);
-                                }
-                                chatArea.scrollTop = chatArea.scrollHeight;
-                            }
+                        // La transcripción llega en fragmentos (deltas), no completa; hay que acumularla
+                        if (sc.inputTranscription && typeof sc.inputTranscription.text === 'string') {
+                            liveInputBuffer += sc.inputTranscription.text;
                         }
 
-                        // Turn complete → guardar en historial
-                        if (sc.turnComplete && currentLiveAnswerId) {
-                            const qEl = document.getElementById(currentLiveAnswerId + '-q');
-                            const aEl = document.getElementById(currentLiveAnswerId + '-a');
-                            if (qEl && aEl) {
-                                const qText = qEl.querySelector('.msg-bubble').textContent.replace('Live', '').trim();
-                                const aText = aEl.querySelector('.msg-bubble').textContent.replace('Live', '').trim();
-                                qaHistory.push({ id: currentLiveAnswerId, question: qText, answer: aText, chunks: [], isLive: true, timestamp: new Date() });
-                                updateHistoryPanel();
+                        // La primera porción de la respuesta indica que el usuario terminó de hablar:
+                        // ahí "soltamos" la pregunta acumulada y arrancamos la burbuja de respuesta.
+                        if (sc.outputTranscription && typeof sc.outputTranscription.text === 'string') {
+                            if (!liveAnswerId) {
+                                removeListeningBubble();
+                                liveAnswerId = 'live-' + Date.now();
+                                const qText = liveInputBuffer.trim() || '(entrada de voz)';
+                                const qHtml = '<div class="msg-row user" id="' + liveAnswerId + '-q"><div class="msg-bubble"><span class="live-badge">Live</span>' + escapeHtml(qText) + '</div></div>';
+                                const aHtml = '<div class="msg-row assistant" id="' + liveAnswerId + '-a"><div class="msg-bubble"><span class="live-badge">Live</span><span class="live-answer-text"></span></div></div>';
+                                chatArea.insertAdjacentHTML('beforeend', qHtml + aHtml);
+                                liveOutputBuffer = '';
                             }
-                            currentLiveAnswerId = null;
+                            liveOutputBuffer += sc.outputTranscription.text;
+                            const ansTextEl = document.querySelector('#' + liveAnswerId + '-a .live-answer-text');
+                            if (ansTextEl) ansTextEl.innerHTML = formatMarkdown(liveOutputBuffer);
+                            chatArea.scrollTop = chatArea.scrollHeight;
                         }
 
-                        // Audio output
+                        // Turno completo → guardar en historial y volver a escuchar
+                        if (sc.turnComplete) {
+                            if (liveAnswerId) {
+                                qaHistory.push({
+                                    id: liveAnswerId,
+                                    question: liveInputBuffer.trim(),
+                                    answer: liveOutputBuffer.trim(),
+                                    chunks: [],
+                                    isLive: true,
+                                    timestamp: new Date()
+                                });
+                            }
+                            liveAnswerId = null;
+                            liveInputBuffer = '';
+                            liveOutputBuffer = '';
+                            if (isLiveMode) showListeningBubble();
+                        }
+
+                        // Audio de salida (PCM crudo, 24kHz, 16-bit, mono, little-endian)
                         if (sc.modelTurn && sc.modelTurn.parts) {
                             for (const part of sc.modelTurn.parts) {
                                 if (part.inlineData && part.inlineData.data) {
-                                    playAudio(part.inlineData.data);
+                                    playAudioChunk(part.inlineData.data);
                                 }
                             }
                         }
@@ -1128,9 +1137,7 @@
 
                 liveWs.onerror = (error) => {
                     console.error('Live WebSocket error:', error);
-                    const errHtml = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> Error de conexión en modo Live</div></div>';
-                    chatArea.insertAdjacentHTML('beforeend', errHtml);
-                    chatArea.scrollTop = chatArea.scrollHeight;
+                    addSystemMessage('Error de conexión en modo Live');
                     stopLiveMode();
                 };
 
@@ -1146,12 +1153,10 @@
         }
 
         function stopLiveMode() {
+            const wasLive = isLiveMode;
             isLiveMode = false;
-            const btnLive = document.getElementById('btnLive');
-            const liveIndicator = document.getElementById('liveIndicator');
-
-            btnLive.classList.remove('active');
-            liveIndicator.classList.remove('show');
+            updateLiveButtonUI(false);
+            removeListeningBubble();
 
             if (liveWs) {
                 liveWs.close();
@@ -1163,12 +1168,29 @@
                 liveMediaStream = null;
             }
 
+            if (liveAudioWorklet) {
+                liveAudioWorklet.disconnect();
+                liveAudioWorklet = null;
+            }
+
             if (liveAudioContext) {
                 liveAudioContext.close();
                 liveAudioContext = null;
             }
 
-            currentLiveAnswerId = null;
+            stopAllLiveAudio();
+            if (liveOutputCtx) {
+                liveOutputCtx.close();
+                liveOutputCtx = null;
+            }
+
+            liveAnswerId = null;
+            liveInputBuffer = '';
+            liveOutputBuffer = '';
+
+            if (wasLive) {
+                addSystemMessage('Finalizó Modo Live - Escribe para continuar.');
+            }
         }
 
         async function startMicrophoneCapture() {
@@ -1208,10 +1230,7 @@
 
             } catch (e) {
                 console.error('Error accessing microphone:', e);
-                const chatArea = document.getElementById('chatArea');
-                const errHtml = '<div class="msg-row assistant"><div class="msg-bubble"><span class="live-badge">Live</span> No se pudo acceder al micrófono. Verifica los permisos.</div></div>';
-                chatArea.insertAdjacentHTML('beforeend', errHtml);
-                chatArea.scrollTop = chatArea.scrollHeight;
+                addSystemMessage('No se pudo acceder al micrófono. Verifica los permisos.');
             }
         }
 
@@ -1224,33 +1243,69 @@
             return btoa(binary);
         }
 
-        function playAudio(base64Data) {
+        // ─── Reproducción de audio del modelo ───
+        // El audio llega como PCM crudo (sin cabecera), por lo que NO se puede usar
+        // decodeAudioData (eso esperaba un archivo codificado tipo WAV/MP3 y fallaba
+        // silenciosamente). Aquí se decodifica manualmente y se agenda en cola sobre
+        // un único AudioContext persistente para que no se corte ni se solape.
+        function ensureOutputContext() {
+            if (!liveOutputCtx) {
+                liveOutputCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                liveNextStartTime = liveOutputCtx.currentTime;
+            }
+            return liveOutputCtx;
+        }
+
+        function playAudioChunk(base64Data) {
             try {
-                const audioData = atob(base64Data);
-                const arrayBuffer = new ArrayBuffer(audioData.length);
-                const view = new Uint8Array(arrayBuffer);
-                for (let i = 0; i < audioData.length; i++) {
-                    view[i] = audioData.charCodeAt(i);
+                const ctx = ensureOutputContext();
+                const binaryStr = atob(base64Data);
+                const len = binaryStr.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+                const view = new DataView(bytes.buffer);
+                const sampleCount = Math.floor(len / 2);
+                if (sampleCount === 0) return;
+
+                const audioBuffer = ctx.createBuffer(1, sampleCount, 24000);
+                const channelData = audioBuffer.getChannelData(0);
+                for (let i = 0; i < sampleCount; i++) {
+                    channelData[i] = view.getInt16(i * 2, true) / 32768; // little-endian
                 }
 
-                const audioCtx = new AudioContext({ sampleRate: 24000 });
-                audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = buffer;
-                    source.connect(audioCtx.destination);
-                    source.start();
-                }, (e) => {
-                    console.error('Error decoding audio:', e);
-                });
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+                if (liveNextStartTime < now) liveNextStartTime = now;
+                source.start(liveNextStartTime);
+                liveNextStartTime += audioBuffer.duration;
+
+                liveActiveSources.push(source);
+                source.onended = () => {
+                    const idx = liveActiveSources.indexOf(source);
+                    if (idx !== -1) liveActiveSources.splice(idx, 1);
+                };
             } catch (e) {
-                console.error('Error playing audio:', e);
+                console.error('Error reproduciendo audio:', e);
             }
         }
 
-        // También permitir enviar texto en modo live
+        function stopAllLiveAudio() {
+            liveActiveSources.forEach(s => {
+                try { s.stop(); } catch (e) { /* ya pudo haber terminado */ }
+            });
+            liveActiveSources = [];
+            if (liveOutputCtx) liveNextStartTime = liveOutputCtx.currentTime;
+        }
+
+        // Enviar texto durante el modo Live (sin hablar)
         async function sendLiveText(text) {
             if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
-
+            removeListeningBubble();
+            liveInputBuffer = text;
             liveWs.send(JSON.stringify({
                 realtimeInput: {
                     text: text
@@ -1261,15 +1316,7 @@
         window.addEventListener('load', loadKB);
         document.getElementById('query').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                if (isLiveMode) {
-                    const text = document.getElementById('query').value.trim();
-                    if (text) {
-                        sendLiveText(text);
-                        document.getElementById('query').value = '';
-                    }
-                } else {
-                    search();
-                }
+                handleSubmit();
             }
         });
     </script>
