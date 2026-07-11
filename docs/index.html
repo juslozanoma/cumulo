@@ -29,8 +29,8 @@
         }
 
         .logo {
-            width: 160px;
-            height: 160px;
+            width: 220px;
+            height: 220px;
             margin: 0 auto 32px;
             display: flex;
             align-items: center;
@@ -50,6 +50,42 @@
             border-radius: 8px;
             margin-bottom: 20px;
             border-left: 3px solid #f59e0b;
+            transition: all 0.3s ease;
+        }
+
+        .api-setup.hidden {
+            display: none;
+        }
+
+        .api-success {
+            display: none;
+            background: #1a2f1a;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 3px solid #10b981;
+            color: #10b981;
+            font-size: 15px;
+            font-weight: 500;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .api-success.show {
+            display: flex;
+        }
+
+        .api-success svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .api-setup label {
@@ -215,6 +251,7 @@
             color: #ccc;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="container">
@@ -222,9 +259,16 @@
             <img src="icon.png" alt="Cumulo" onerror="this.style.display='none'">
         </div>
 
-        <div class="api-setup">
-            <label>🔑 API Key Gemini (<a href="https://makersuite.google.com/app/apikey" target="_blank">obtén una gratis aquí</a>):</label>
+        <div class="api-setup" id="apiSetup">
+            <label>Escribe el código de acceso:</label>
             <input type="password" id="apiKey" placeholder="AIzaSy...">
+        </div>
+
+        <div class="api-success" id="apiSuccess">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Autenticación correcta
         </div>
 
         <div class="search-box">
@@ -282,18 +326,28 @@
         async function search() {
             const query = document.getElementById('query').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
+            const apiSetup = document.getElementById('apiSetup');
+            const apiSuccess = document.getElementById('apiSuccess');
+            const resultsEl = document.getElementById('results');
+
+            // Si no hay API key, mostrar mensaje de bienvenida
+            if (!apiKey) {
+                resultsEl.innerHTML = '<div class="result-item answer"><strong>¿Qué puedo investigar en este buscador?</strong><p>Este buscador te permite consultar información sobre <strong>decisiones, actas y procesos del grupo de astronomía Cúmulo</strong>. Puedes preguntar sobre reuniones, acuerdos, eventos, proyectos y cualquier documento relevante de la organización. Para obtener respuestas, primero debes ingresar tu código de acceso en el campo superior.</p></div>';
+                resultsEl.classList.add('show');
+                return;
+            }
+
+            // Si hay API key pero el setup aún está visible, ocultarlo y mostrar éxito
+            if (!apiSetup.classList.contains('hidden')) {
+                apiSetup.classList.add('hidden');
+                apiSuccess.classList.add('show');
+            }
 
             if (!query) {
                 alert('Escribe una pregunta');
                 return;
             }
 
-            if (!apiKey) {
-                alert('Ingresa tu API Key');
-                return;
-            }
-
-            const resultsEl = document.getElementById('results');
             resultsEl.innerHTML = '<div class="loading">Buscando...</div>';
             resultsEl.classList.add('show');
 
