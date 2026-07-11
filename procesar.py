@@ -26,7 +26,7 @@ import json
 import re
 import hashlib
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from collections import Counter, defaultdict
 from typing import List, Dict, Any, Optional, Tuple, Set
@@ -58,20 +58,6 @@ OUTPUT_DIR = Path("docs")
 # Tamaños y límites
 CHUNK_MAX_WORDS = 600          # Palabras máximas por chunk
 CHUNK_MAX_CHARS = 4000         # Caracteres máximos por chunk (seguridad)
-
-# Patrones de fechas (ordenados por especificidad)
-DATE_PATTERNS = [
-    # ISO: 2025-08-15
-    (r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b', 'iso'),
-    # Español largo: 15 de agosto de 2025
-    (r'\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de(?:l)?\s+(\d{4})\b', 'es_long'),
-    # Español corto: 15/08/2025 o 15-08-2025
-    (r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b', 'es_short'),
-    # Rangos: 27-29 de enero de 2026
-    (r'\b(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de(?:l)?\s+(\d{4})\b', 'es_range'),
-    # Múltiples: 12, 13 y 15 de agosto de 2025
-    (r'\b(\d{1,2})(?:,\s+(\d{1,2}))(?:\s+y\s+(\d{1,2}))?\s+de\s+([a-záéíóúñ]+)\s+de(?:l)?\s+(\d{4})\b', 'es_multi'),
-]
 
 MESES_ES = {
     'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
@@ -176,18 +162,6 @@ STOPWORDS_ES = {
     'tened',
 }
 
-# Errores comunes de OCR y sus correcciones
-OCR_REPLACEMENTS = [
-    (r'\bﬁ\b', 'fi'),
-    (r'\bﬂ\b', 'fl'),
-    (r'\bﬃ\b', 'ffi'),
-    (r'\bﬄ\b', 'ffl'),
-    (r'\bﬀ\b', 'ff'),
-    (r'([a-zA-Z])-
-([a-zA-Z])', r'\1\2'),  # palabra partida
-    (r'([a-zA-Z])-\n?([a-zA-Z])', r'\1\2'),
-]
-
 
 # ---------------------------------------------------------------------------
 # FUNCIONES DE EXTRACCIÓN DE TEXTO
@@ -230,7 +204,7 @@ def extract_text_from_docx(path: Path) -> Tuple[str, int]:
         doc = Document(str(path))
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         text = "\n".join(paragraphs).strip()
-        # Estimación burda de páginas: ~3000 chars por página
+        # Estimacion burda de paginas: ~3000 chars por pagina
         estimated_pages = max(1, len(text) // 3000)
         return text, estimated_pages
     except Exception as e:
@@ -260,7 +234,7 @@ def extract_text_from_plain(path: Path) -> Tuple[str, int]:
 
 def extract_text(path: Path) -> Tuple[str, int]:
     """
-    Dispatcher de extracción de texto según extensión del archivo.
+    Dispatcher de extraccion de texto segun extension del archivo.
 
     Args:
         path: Ruta al archivo.
@@ -284,23 +258,34 @@ def extract_text(path: Path) -> Tuple[str, int]:
 # ---------------------------------------------------------------------------
 
 def normalize_newlines(text: str) -> str:
-    """Normaliza todos los saltos de línea a \n."""
+    """Normaliza todos los saltos de linea a \\n."""
     text = text.replace('\r\n', '\n').replace('\r', '\n')
-    # Eliminar saltos de línea múltiples excesivos, mantener párrafos
+    # Eliminar saltos de linea multiples excesivos, mantener parrafos
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text
 
 
 def fix_ocr_errors(text: str) -> str:
     """Corrige errores comunes de OCR y caracteres especiales."""
-    for pattern, replacement in OCR_REPLACEMENTS:
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    # fi ligature
+    text = text.replace('\ufb01', 'fi')
+    # fl ligature
+    text = text.replace('\ufb02', 'fl')
+    # ffi ligature
+    text = text.replace('\ufb03', 'ffi')
+    # ffl ligature
+    text = text.replace('\ufb04', 'ffl')
+    # ff ligature
+    text = text.replace('\ufb00', 'ff')
+    # Palabra partida al final de linea (ej: "palabra-\nabra")
+    text = re.sub(r'([a-zA-Z])-\n([a-zA-Z])', r'\1\2', text)
+    text = re.sub(r'([a-zA-Z])-\r\n?([a-zA-Z])', r'\1\2', text)
     return text
 
 
 def remove_invisible_chars(text: str) -> str:
     """Elimina caracteres de control e invisibles, preservando acentos."""
-    # Preservar tabulaciones (\t) y saltos de línea (\n)
+    # Preservar tabulaciones (\\t) y saltos de linea (\\n)
     allowed = set('\t\n')
     cleaned = []
     for ch in text:
@@ -312,7 +297,7 @@ def remove_invisible_chars(text: str) -> str:
 
 
 def collapse_spaces(text: str) -> str:
-    """Colapsa espacios múltiples en uno solo, preservando indentación de listas."""
+    """Colapsa espacios multiples en uno solo, preservando indentacion de listas."""
     lines = text.split('\n')
     cleaned_lines = []
     for line in lines:
@@ -330,7 +315,7 @@ def clean_text(text: str) -> str:
     Pipeline completo de limpieza de texto.
 
     Orden:
-        1. Normalizar saltos de línea
+        1. Normalizar saltos de linea
         2. Corregir OCR
         3. Eliminar caracteres invisibles
         4. Colapsar espacios
@@ -343,7 +328,7 @@ def clean_text(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE DETECCIÓN DE METADATOS
+# FUNCIONES DE DETECCION DE METADATOS
 # ---------------------------------------------------------------------------
 
 def detect_document_type(text: str, filename: str) -> str:
@@ -355,7 +340,7 @@ def detect_document_type(text: str, filename: str) -> str:
         filename: Nombre del archivo.
 
     Returns:
-        Tipo de documento en minúsculas.
+        Tipo de documento en minusculas.
     """
     combined = (filename + " " + text[:2000]).lower()
 
@@ -393,18 +378,18 @@ def detect_document_type(text: str, filename: str) -> str:
 
 def detect_committee(text: str, filename: str) -> str:
     """
-    Detecta el comité al que pertenece el documento.
+    Detecta el comite al que pertenece el documento.
 
     Args:
         text: Contenido del documento.
         filename: Nombre del archivo.
 
     Returns:
-        Nombre del comité normalizado.
+        Nombre del comite normalizado.
     """
     combined = (filename + " " + text[:3000]).lower()
 
-    # Mapeo de variantes a nombre canónico
+    # Mapeo de variantes a nombre canonico
     committee_map = {
         'tesoreria': ['tesoreria', 'tesorero', 'presupuesto', 'finanzas', 'viaticos', 'viáticos'],
         'astrolectura': ['astrolectura', 'lectura', 'libro', 'libros'],
@@ -442,7 +427,7 @@ def detect_committee(text: str, filename: str) -> str:
 
 def detect_scope(text: str, filename: str) -> str:
     """
-    Detecta el alcance geográfico o institucional del documento.
+    Detecta el alcance geografico o institucional del documento.
 
     Args:
         text: Contenido del documento.
@@ -469,7 +454,7 @@ def detect_scope(text: str, filename: str) -> str:
 
 def detect_semester(text: str, filename: str) -> Optional[str]:
     """
-    Detecta el semestre académico al que pertenece el documento.
+    Detecta el semestre academico al que pertenece el documento.
 
     Args:
         text: Contenido del documento.
@@ -480,7 +465,7 @@ def detect_semester(text: str, filename: str) -> Optional[str]:
     """
     combined = filename + " " + text[:1500]
 
-    # Patrón explícito: 2025-1, 2025-2, 2026-1, etc.
+    # Patron explicito: 2025-1, 2025-2, 2026-1, etc.
     match = re.search(r'\b(\d{4})[-\s]?(1|2)\b', combined)
     if match:
         year, sem = match.groups()
@@ -527,11 +512,11 @@ def detect_status(text: str, filename: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE EXTRACCIÓN DE FECHAS
+# FUNCIONES DE EXTRACCION DE FECHAS
 # ---------------------------------------------------------------------------
 
 def _parse_month(month_str: str) -> Optional[int]:
-    """Convierte nombre de mes a número."""
+    """Convierte nombre de mes a numero."""
     month_str = month_str.lower().strip()
     return MESES_ES.get(month_str)
 
@@ -559,21 +544,21 @@ def extract_dates(text: str, filename: str) -> Optional[Dict[str, Any]]:
     combined = filename + " " + text[:3000]
     found_dates: Set[str] = set()
 
-    # Patrón ISO: 2025-08-15
+    # Patron ISO: 2025-08-15
     for m in re.finditer(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b', combined):
         year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
         d = _normalize_date(year, month, day)
         if d:
             found_dates.add(d)
 
-    # Patrón español corto: 15/08/2025
+    # Patron espanol corto: 15/08/2025
     for m in re.finditer(r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b', combined):
         day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
         d = _normalize_date(year, month, day)
         if d:
             found_dates.add(d)
 
-    # Patrón español largo: 15 de agosto de 2025
+    # Patron espanol largo: 15 de agosto de 2025
     pattern_long = r'\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de(?:l)?\s+(\d{4})\b'
     for m in re.finditer(pattern_long, combined, re.IGNORECASE):
         day = int(m.group(1))
@@ -597,7 +582,7 @@ def extract_dates(text: str, filename: str) -> Optional[Dict[str, Any]]:
                 if d:
                     found_dates.add(d)
 
-    # Múltiples: 12, 13 y 15 de agosto de 2025
+    # Multiples: 12, 13 y 15 de agosto de 2025
     pattern_multi = r'\b(\d{1,2})(?:,\s+(\d{1,2}))(?:\s+y\s+(\d{1,2}))?\s+de\s+([a-záéíóúñ]+)\s+de(?:l)?\s+(\d{4})\b'
     for m in re.finditer(pattern_multi, combined, re.IGNORECASE):
         days = [int(m.group(1))]
@@ -625,15 +610,15 @@ def extract_dates(text: str, filename: str) -> Optional[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE EXTRACCIÓN DE PERSONAS Y FIRMANTES
+# FUNCIONES DE EXTRACCION DE PERSONAS Y FIRMANTES
 # ---------------------------------------------------------------------------
 
 def extract_people(text: str) -> List[Dict[str, str]]:
     """
     Extrae nombres de personas y sus posibles cargos.
 
-    Heurística:
-        - Busca líneas que contengan palabras de cargo.
+    Heuristica:
+        - Busca lineas que contengan palabras de cargo.
         - Extrae nombres propios (2-4 palabras capitalizadas).
 
     Args:
@@ -645,10 +630,7 @@ def extract_people(text: str) -> List[Dict[str, str]]:
     people = []
     seen = set()
 
-    # Patrón: cargo + nombre o nombre + cargo
-    role_pattern = '|'.join(re.escape(r) for r in ROLES)
-
-    # Líneas que contienen un cargo
+    # Lineas que contienen un cargo
     lines = text.split('\n')
     for line in lines:
         line_lower = line.lower()
@@ -656,7 +638,6 @@ def extract_people(text: str) -> List[Dict[str, str]]:
             continue
 
         # Extraer nombres propios (2-4 palabras capitalizadas consecutivas)
-        # Excluir palabras comunes que no son nombres
         name_matches = re.findall(
             r'\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,3})\b',
             line
@@ -666,7 +647,7 @@ def extract_people(text: str) -> List[Dict[str, str]]:
             name = name.strip()
             if len(name) < 5:  # Filtrar muy cortos
                 continue
-            # Detectar cargo en la línea
+            # Detectar cargo en la linea
             detected_role = 'asistente'
             for role in ROLES:
                 if role in line_lower:
@@ -685,7 +666,7 @@ def extract_signatures(text: str) -> List[Dict[str, str]]:
     """
     Extrae firmas del documento.
 
-    Heurística:
+    Heuristica:
         - Busca secciones de firma.
         - Extrae nombres y cargos cercanos a palabras como "firma", "firmado".
 
@@ -699,7 +680,6 @@ def extract_signatures(text: str) -> List[Dict[str, str]]:
     seen = set()
 
     # Buscar bloques de firma
-    # Patrones: "Firma: Nombre", "Nombre (Cargo)", líneas con "firma"
     signature_blocks = re.split(
         r'(?:firma[s]?|firmado[s]?|firmantes|firmado por)[:\s]*',
         text,
@@ -707,7 +687,7 @@ def extract_signatures(text: str) -> List[Dict[str, str]]:
     )
 
     for block in signature_blocks[1:]:  # Saltar el primer bloque (antes de "firma")
-        block_text = block[:500]  # Solo las primeras 500 chars después de "firma"
+        block_text = block[:500]  # Solo las primeras 500 chars despues de "firma"
         lines = block_text.split('\n')[:10]
 
         for line in lines:
@@ -743,7 +723,7 @@ def extract_signatures(text: str) -> List[Dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE EXTRACCIÓN DE SECCIONES
+# FUNCIONES DE EXTRACCION DE SECCIONES
 # ---------------------------------------------------------------------------
 
 def extract_sections(text: str) -> Dict[str, str]:
@@ -758,9 +738,9 @@ def extract_sections(text: str) -> Dict[str, str]:
     """
     sections = {}
 
-    # Construir patrón de encabezados
+    # Construir patron de encabezados
     header_pattern = '|'.join(re.escape(h) for h in SECTION_HEADERS)
-    # Encabezados pueden estar en mayúsculas, con :, ., o en negrita
+    # Encabezados pueden estar en mayusculas, con :, ., o en negrita
     regex = re.compile(
         rf'(?:^|\n)\s*(?:#{{1,4}}\s*)?\b({header_pattern})\b[:\.\s]*(?:\n|$)',
         re.IGNORECASE
@@ -793,28 +773,28 @@ def extract_sections(text: str) -> Dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE GENERACIÓN DE RESUMEN Y PALABRAS CLAVE
+# FUNCIONES DE GENERACION DE RESUMEN Y PALABRAS CLAVE
 # ---------------------------------------------------------------------------
 
 def generate_summary(text: str, sections: Dict[str, str]) -> str:
     """
-    Genera un resumen automático sin usar IA.
+    Genera un resumen automatico sin usar IA.
 
     Estrategia:
-        1. Usar primer párrafo si es informativo (>100 chars).
+        1. Usar primer parrafo si es informativo (>100 chars).
         2. Combinar con contenido de secciones 'contexto', 'objetivos'.
         3. Limitar a ~300 palabras.
 
     Args:
         text: Texto completo del documento.
-        sections: Secciones extraídas.
+        sections: Secciones extraidas.
 
     Returns:
         Resumen breve.
     """
     parts = []
 
-    # Primer párrafo
+    # Primer parrafo
     first_para = text.split('\n\n')[0].strip() if text else ""
     if len(first_para) > 50:
         parts.append(first_para)
@@ -851,7 +831,7 @@ def generate_keywords(text: str) -> List[str]:
     Returns:
         Lista de palabras clave ordenadas por frecuencia.
     """
-    # Extraer palabras (mínimo 3 caracteres, solo letras)
+    # Extraer palabras (minimo 3 caracteres, solo letras)
     words = re.findall(r'\b[a-záéíóúñ]{3,}\b', text.lower())
 
     # Filtrar stopwords
@@ -880,7 +860,7 @@ def smart_chunk(text: str, sections: Dict[str, str]) -> List[Dict[str, Any]]:
 
     Args:
         text: Texto completo del documento.
-        sections: Secciones extraídas.
+        sections: Secciones extraidas.
 
     Returns:
         Lista de chunks con metadata.
@@ -895,7 +875,7 @@ def smart_chunk(text: str, sections: Dict[str, str]) -> List[Dict[str, Any]]:
         words = section_text.split()
 
         if len(words) <= CHUNK_MAX_WORDS:
-            # La sección cabe en un solo chunk
+            # La seccion cabe en un solo chunk
             chunks.append({
                 'id': f"chunk_{chunk_id:05d}",
                 'section': section_name,
@@ -905,7 +885,7 @@ def smart_chunk(text: str, sections: Dict[str, str]) -> List[Dict[str, Any]]:
             })
             chunk_id += 1
         else:
-            # Subdividir la sección respetando párrafos
+            # Subdividir la seccion respetando parrafos
             paragraphs = section_text.split('\n\n')
             current_chunk = []
             current_words = 0
@@ -917,7 +897,7 @@ def smart_chunk(text: str, sections: Dict[str, str]) -> List[Dict[str, Any]]:
 
                 para_words = len(para.split())
 
-                # Si agregar este párrafo excede el límite y ya hay contenido
+                # Si agregar este parrafo excede el limite y ya hay contenido
                 if current_words + para_words > CHUNK_MAX_WORDS and current_chunk:
                     chunk_text = '\n\n'.join(current_chunk)
                     chunks.append({
@@ -950,11 +930,11 @@ def smart_chunk(text: str, sections: Dict[str, str]) -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE CONTEO Y ESTADÍSTICAS
+# FUNCIONES DE CONTEO Y ESTADISTICAS
 # ---------------------------------------------------------------------------
 
 def count_attendees(people: List[Dict[str, str]]) -> int:
-    """Cuenta el número de asistentes/participantes."""
+    """Cuenta el numero de asistentes/participantes."""
     return len(people)
 
 
@@ -977,7 +957,6 @@ def count_tasks(text: str) -> int:
     patterns = [
         r'\btarea[s]?\b',
         r'\bpending[s]?\b',
-        r'\bpending[s]?\b',
         r'\basignar\b',
         r'\basignado\b',
         r'\bresponsable\b',
@@ -991,7 +970,7 @@ def count_tasks(text: str) -> int:
 
 
 def count_signatures(signatures: List[Dict[str, str]]) -> int:
-    """Cuenta firmas extraídas."""
+    """Cuenta firmas extraidas."""
     return len(signatures)
 
 
@@ -1011,17 +990,17 @@ def compute_file_hash(path: Path) -> str:
 def build_stats(text: str, people: List[Dict], signatures: List[Dict],
                 chunks: List[Dict], pages: int) -> Dict[str, Any]:
     """
-    Construye el bloque de estadísticas del documento.
+    Construye el bloque de estadisticas del documento.
 
     Args:
         text: Texto completo.
         people: Lista de participantes.
         signatures: Lista de firmas.
         chunks: Lista de chunks.
-        pages: Número de páginas.
+        pages: Numero de paginas.
 
     Returns:
-        Diccionario de estadísticas.
+        Diccionario de estadisticas.
     """
     words = len(text.split())
     chars = len(text)
@@ -1039,22 +1018,22 @@ def build_stats(text: str, people: List[Dict], signatures: List[Dict],
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE CONSTRUCCIÓN DE DOCUMENTO
+# FUNCIONES DE CONSTRUCCION DE DOCUMENTO
 # ---------------------------------------------------------------------------
 
 def generate_document_id(doc_type: str, committee: str, dates: Optional[Dict],
                          filename: str, index: int) -> str:
     """
-    Genera un identificador único permanente para el documento.
+    Genera un identificador unico permanente para el documento.
 
     Formato: TIPO-COMITE-AAAA-NNN
 
     Args:
         doc_type: Tipo de documento.
-        committee: Comité.
-        dates: Fechas extraídas.
+        committee: Comite.
+        dates: Fechas extraidas.
         filename: Nombre original.
-        index: Índice numérico para unicidad.
+        index: Indice numerico para unicidad.
 
     Returns:
         Identificador del documento.
@@ -1066,7 +1045,7 @@ def generate_document_id(doc_type: str, committee: str, dates: Optional[Dict],
     if dates and dates.get('start'):
         year = dates['start'][:4]
     else:
-        # Intentar extraer año del filename
+        # Intentar extraer anio del filename
         m = re.search(r'\b(\d{4})\b', filename)
         if m:
             year = m.group(1)
@@ -1080,7 +1059,7 @@ def build_document(path: Path, index: int) -> Optional[Dict[str, Any]]:
 
     Args:
         path: Ruta al archivo.
-        index: Índice para generar ID único.
+        index: Indice para generar ID unico.
 
     Returns:
         Diccionario del documento o None si falla.
@@ -1090,7 +1069,7 @@ def build_document(path: Path, index: int) -> Optional[Dict[str, Any]]:
     # 1. Extraer texto
     text, pages = extract_text(path)
     if not text:
-        print("⚠️  (vacío)")
+        print("⚠️  (vacio)")
         return None
 
     # 2. Limpiar texto
@@ -1118,13 +1097,13 @@ def build_document(path: Path, index: int) -> Optional[Dict[str, Any]]:
     # 7. Chunks inteligentes
     chunks = smart_chunk(text, sections)
 
-    # 8. Estadísticas
+    # 8. Estadisticas
     stats = build_stats(text, people, signatures, chunks, pages)
 
     # 9. Hash del archivo
     file_hash = compute_file_hash(path)
 
-    # 10. Información del archivo
+    # 10. Informacion del archivo
     file_info = {
         'name': path.name,
         'path': str(path),
@@ -1142,14 +1121,14 @@ def build_document(path: Path, index: int) -> Optional[Dict[str, Any]]:
     for chunk in chunks:
         chunk['document_id'] = doc_id
 
-    # 13. Relaciones (inicialmente vacías, se llenan en post-proceso)
+    # 13. Relaciones (inicialmente vacias, se llenan en post-proceso)
     relations = {
         'same_committee': [],
         'consecutive': [],
         'versions': [],
     }
 
-    # 14. Versión (inferida del nombre)
+    # 14. Version (inferida del nombre)
     version = "1.0"
     v_match = re.search(r'v(\d+(?:\.\d+)?)', path.name, re.IGNORECASE)
     if v_match:
@@ -1187,19 +1166,19 @@ def build_relations(documents: List[Dict[str, Any]]) -> None:
     Detecta y establece relaciones entre documentos.
 
     Relaciones:
-        - same_committee: documentos del mismo comité.
+        - same_committee: documentos del mismo comite.
         - consecutive: actas con IDs consecutivos.
-        - versions: documentos con mismo tipo+comité+año pero diferente versión.
+        - versions: documentos con mismo tipo+comite+anio pero diferente version.
 
     Args:
         documents: Lista de documentos (modificada in-place).
     """
-    # Índice por comité
+    # Indice por comite
     by_committee = defaultdict(list)
     for doc in documents:
         by_committee[doc['committee']].append(doc['document_id'])
 
-    # Índice por tipo+comité+año
+    # Indice por tipo+comite+anio
     by_group = defaultdict(list)
     for doc in documents:
         key = f"{doc['document_type']}-{doc['committee']}"
@@ -1210,11 +1189,11 @@ def build_relations(documents: List[Dict[str, Any]]) -> None:
     for doc in documents:
         doc_id = doc['document_id']
 
-        # Mismo comité
+        # Mismo comite
         same = [d for d in by_committee[doc['committee']] if d != doc_id]
         doc['relations']['same_committee'] = same[:10]  # Limitar a 10
 
-        # Consecutivos (mismo prefijo, número +1 o -1)
+        # Consecutivos (mismo prefijo, numero +1 o -1)
         prefix = '-'.join(doc_id.split('-')[:-1])
         try:
             num = int(doc_id.split('-')[-1])
@@ -1240,12 +1219,12 @@ def build_relations(documents: List[Dict[str, Any]]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE CONSTRUCCIÓN DE METADATA GLOBAL
+# FUNCIONES DE CONSTRUCCION DE METADATA GLOBAL
 # ---------------------------------------------------------------------------
 
 def build_metadata(documents: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Construye el índice global de metadatos (kb-metadata.json).
+    Construye el indice global de metadatos (kb-metadata.json).
 
     Args:
         documents: Lista de todos los documentos procesados.
@@ -1256,10 +1235,10 @@ def build_metadata(documents: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Conteos por tipo
     type_counts = Counter(d['document_type'] for d in documents)
 
-    # Conteos por comité
+    # Conteos por comite
     committee_counts = Counter(d['committee'] for d in documents)
 
-    # Conteos por año
+    # Conteos por anio
     year_counts = Counter()
     for d in documents:
         if d['dates'] and d['dates'].get('start'):
@@ -1280,19 +1259,19 @@ def build_metadata(documents: List[Dict[str, Any]]) -> Dict[str, Any]:
         folder = d['file']['path'].split(os.sep)[1] if os.sep in d['file']['path'] else 'root'
         folder_counts[folder] += 1
 
-    # Personas detectadas (únicas)
+    # Personas detectadas (unicas)
     all_people = set()
     for d in documents:
         for p in d['participants']:
             all_people.add(p['name'])
 
-    # Firmantes (únicos)
+    # Firmantes (unicos)
     all_signers = set()
     for d in documents:
         for s in d['signatures']:
             all_signers.add(s['name'])
 
-    # Fechas mínima y máxima
+    # Fechas minima y maxima
     all_dates = []
     for d in documents:
         if d['dates'] and d['dates'].get('all'):
@@ -1305,13 +1284,13 @@ def build_metadata(documents: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     docs_without_date = sum(1 for d in documents if d['dates'] is None)
 
-    # Palabras clave más frecuentes
+    # Palabras clave mas frecuentes
     all_keywords = []
     for d in documents:
         all_keywords.extend(d['keywords'])
     top_keywords = [kw for kw, _ in Counter(all_keywords).most_common(30)]
 
-    # Documentos con más tareas
+    # Documentos con mas tareas
     docs_by_tasks = sorted(
         documents,
         key=lambda d: d['stats']['tasks'],
@@ -1360,7 +1339,7 @@ def build_metadata(documents: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# FUNCIONES DE EXPORTACIÓN
+# FUNCIONES DE EXPORTACION
 # ---------------------------------------------------------------------------
 
 def export_json(documents: List[Dict[str, Any]], metadata: Dict[str, Any]) -> None:
@@ -1390,7 +1369,7 @@ def export_json(documents: List[Dict[str, Any]], metadata: Dict[str, Any]) -> No
 
 
 # ---------------------------------------------------------------------------
-# FUNCIÓN PRINCIPAL
+# FUNCION PRINCIPAL
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -1400,7 +1379,7 @@ def main() -> None:
     print("=" * 70)
 
     if not INPUT_DIR.exists():
-        print(f"\n❌ No se encontró la carpeta '{INPUT_DIR}' en {Path.cwd()}")
+        print(f"\n❌ No se encontro la carpeta '{INPUT_DIR}' en {Path.cwd()}")
         print("   Crea una carpeta llamada 'documentos' con tus archivos.")
         exit(1)
 
@@ -1424,7 +1403,7 @@ def main() -> None:
             documents.append(doc)
 
     if not documents:
-        print("\n❌ No se pudo procesar ningún documento.")
+        print("\n❌ No se pudo procesar ningun documento.")
         exit(1)
 
     print(f"\n✅ {len(documents)} documentos procesados exitosamente.")
@@ -1434,7 +1413,7 @@ def main() -> None:
     build_relations(documents)
 
     # Construir metadata global
-    print("📊 Generando índice global...")
+    print("📊 Generando indice global...")
     metadata = build_metadata(documents)
 
     # Exportar
@@ -1455,14 +1434,14 @@ def main() -> None:
     print("\n  Por tipo:")
     for doc_type, count in metadata['counts']['by_type'].items():
         print(f"    • {doc_type}: {count}")
-    print("\n  Por comité:")
+    print("\n  Por comite:")
     for committee, count in metadata['counts']['by_committee'].items():
         print(f"    • {committee}: {count}")
     print("\n" + "=" * 70)
-    print("🚀 Próximos pasos:")
+    print("🚀 Proximos pasos:")
     print("   1. Sube docs/kb.json y docs/kb-metadata.json a GitHub")
     print("   2. Activa GitHub Pages: Settings → Pages → /docs folder")
-    print("   3. Tu KB estará en: https://tu-usuario.github.io/cumulo")
+    print("   3. Tu KB estara en: https://tu-usuario.github.io/cumulo")
     print("=" * 70)
 
 
