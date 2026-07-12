@@ -50,9 +50,9 @@
         }
 
         .logo {
-            width: 220px;
-            height: 220px;
-            margin: 0 auto 24px;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 0px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -591,8 +591,8 @@
             }
 
                         .logo {
-                width: 160px;
-                height: 160px;
+                width: 200px;
+                height: 200px;
                 margin: 0 auto 16px;
             }
 
@@ -611,9 +611,7 @@
         </div>
 
         <div class="api-row" id="apiRow">
-            <div class="api-setup" id="apiSetup">
-                <input type="password" id="apiKey" placeholder="Bienvenido, por favor ingresa tu código de acceso para continuar..." onkeypress="if(event.key==='Enter') authenticate()">
-            </div>
+                <input type="password" id="apiKey" placeholder="Ingresa tu código de acceso" onkeypress="if(event.key==='Enter') authenticate()">
             <button class="btn-auth" id="btnAuth" onclick="authenticate()" aria-label="Autenticar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
