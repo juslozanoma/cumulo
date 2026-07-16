@@ -14,8 +14,7 @@ app.use(express.json());
 // ============================================
 // 1. CARGAR CONOCIMIENTO
 // ============================================
-const conocimiento = JSON.parse(fs.readFileSync('./kb.json', 'utf8'));
-
+const conocimiento = JSON.parse(fs.readFileSync('./public/kb.json', 'utf8'));
 // ============================================
 // 2. CONECTAR GEMINI
 // ============================================
