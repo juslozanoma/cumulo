@@ -184,7 +184,7 @@ app.post('/api/chat', async (req, res) => {
     console.log(`📄 Contexto usado: ${context.length} caracteres (de ${JSON.stringify(fs.readFileSync('./public/kb.json', 'utf8')).length} totales)`);
     
     // Enviar a Gemini solo el contexto relevante + la pregunta
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     const prompt = `Usa SOLO esta información para responder. Si no sabes, di "No tengo esa información en mi base de conocimiento":
 
 ${context}
@@ -221,7 +221,7 @@ app.post('/webhook', async (req, res) => {
     const context = relevantChunks.join('\n\n');
 
     // Consultar Gemini con solo el contexto relevante
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     const prompt = `Usa SOLO esta información para responder. Si no sabes, di "No tengo esa información":
 
 ${context}
