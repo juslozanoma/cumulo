@@ -1,13 +1,26 @@
 {
   "name": "cumulo",
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "Cúmulo - Chat con Gemini + WhatsApp Integration",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js",
+    "whatsapp": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "@google/generative-ai": "^0.21.0",
-    "dotenv": "^16.4.5"
+    "@google/generative-ai": "^0.2.0",
+    "dotenv": "^16.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
   }
 }
