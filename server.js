@@ -217,12 +217,12 @@ app.post('/webhook', async (req, res) => {
     // Detectar si es grupo (termina en @g.us) o privado (@s.whatsapp.net)
     const esGrupo = numero.endsWith('@g.us');
 
-    // Solo requerir @cumulo en grupos
-    const trigger = '@cumulo';
+    // Solo requerir @157656052420857 en grupos
+    const trigger = '@157656052420857';
     let pregunta = mensaje.trim();
 
     if (esGrupo) {
-      // En grupos: solo responder si empieza con @cumulo
+      // En grupos: solo responder si empieza con @157656052420857
       if (!pregunta.toLowerCase().startsWith(trigger)) {
         console.log(`⏩ Ignorado en grupo (no tiene ${trigger}): ${pregunta.substring(0, 50)}...`);
         return res.sendStatus(200);
@@ -250,18 +250,28 @@ Pregunta: ${mensaje}`;
 
     console.log(`🤖 Respuesta: ${respuesta}`);
 
-    // Mostrar "escribiendo..." en WhatsApp
-    await fetch(`${EVOLUTION_URL}/chat/presence/${INSTANCE_NAME}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY
-      },
-      body: JSON.stringify({
-        number: numero.replace('@s.whatsapp.net', ''),
-        presence: 'composing'
-      })
-    });
+    // Mostrar "escribiendo..."
+    try {
+      const presenceResponse = await fetch(`${EVOLUTION_URL}/chat/presence/${INSTANCE_NAME}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY
+        },
+        body: JSON.stringify({
+          number: numero.replace('@s.whatsapp.net', ''),
+          presence: 'composing'
+        })
+      });
+      
+      if (!presenceResponse.ok) {
+        console.log(`⚠️ Presence falló: ${presenceResponse.status} ${presenceResponse.statusText}`);
+      } else {
+        console.log(`✅ Mostrando "Escribiendo..."`);
+      }
+    } catch (err) {
+      console.log(`⚠️ Error en presence: ${err.message}`);
+    }
 
     // Esperar 2 segundos simulando que escribe
     await new Promise(resolve => setTimeout(resolve, 2000));
