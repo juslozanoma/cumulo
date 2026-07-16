@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 
 // Cargar conocimiento
-const conocimiento = JSON.parse(fs.readFileSync('./data.json', 'utf8'));
+const conocimiento = JSON.parse(fs.readFileSync('./kb.json', 'utf8'));
 
 // Conectar Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
