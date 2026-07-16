@@ -233,6 +233,22 @@ Pregunta: ${mensaje}`;
 
     console.log(`🤖 Respuesta: ${respuesta}`);
 
+    // Mostrar "escribiendo..." en WhatsApp
+    await fetch(`${EVOLUTION_URL}/chat/presence/${INSTANCE_NAME}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': EVOLUTION_API_KEY
+      },
+      body: JSON.stringify({
+        number: numero.replace('@s.whatsapp.net', ''),
+        presence: 'composing'
+      })
+    });
+
+    // Esperar 2 segundos simulando que escribe
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Enviar respuesta de vuelta por WhatsApp
     await fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
       method: 'POST',
