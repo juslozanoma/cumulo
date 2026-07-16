@@ -210,11 +210,28 @@ app.post('/webhook', async (req, res) => {
     const mensaje = req.body.data?.message?.conversation;
     const numero = req.body.data?.key?.remoteJid;
 
-    // Ignorar mensajes enviados por mí mismo (evita bucles infinitos)
+    // Ignorar mensajes enviados por mí mismo
     if (req.body.data?.key?.fromMe) return res.sendStatus(200);
     if (!mensaje) return res.sendStatus(200);
 
-    console.log(`\n📩 WhatsApp de ${numero}: ${mensaje}`);
+    // Detectar si es grupo (termina en @g.us) o privado (@s.whatsapp.net)
+    const esGrupo = numero.endsWith('@g.us');
+
+    // Solo requerir @cumulo en grupos
+    const trigger = '@cumulo';
+    let pregunta = mensaje.trim();
+
+    if (esGrupo) {
+      // En grupos: solo responder si empieza con @cumulo
+      if (!pregunta.toLowerCase().startsWith(trigger)) {
+        console.log(`⏩ Ignorado en grupo (no tiene ${trigger}): ${pregunta.substring(0, 50)}...`);
+        return res.sendStatus(200);
+      }
+      // Quitar el trigger del mensaje
+      pregunta = pregunta.slice(trigger.length).trim();
+    }
+
+    console.log(`📩 ${esGrupo ? 'Grupo' : 'Privado'} - Pregunta: ${pregunta}`);
 
     // Buscar chunks relevantes
     const relevantChunks = await searchRelevantChunks(mensaje, 3);
