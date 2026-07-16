@@ -18,7 +18,7 @@ app.use(express.json());
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const EVOLUTION_URL = 'https://evolution-api-5q3w.onrender.com';
 const EVOLUTION_API_KEY = 'cumulo2308';
-const INSTANCE_NAME = 'whatsapp-cumulo';
+const INSTANCE_NAME = 'whatsapp-cumulo2';
 
 // ============================================
 // FUNCIONES PARA SIMILITUD DE COSENO
