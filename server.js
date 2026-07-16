@@ -30,7 +30,7 @@ app.post('/webhook', async (req, res) => {
     console.log(`📩 Mensaje de ${numero}: ${mensaje}`);
 
     // Preguntar a Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     const prompt = `Usa solo esta información para responder: ${JSON.stringify(conocimiento)}. 
     Pregunta del usuario: ${mensaje}`;
 
