@@ -32,10 +32,16 @@ function getConversationHistory(number) {
 function addToHistory(number, role, text) {
   const cleanNum = cleanNumber(number);
   let history = conversationMemory.get(cleanNum) || [];
-  history.push({ role, text, timestamp: Date.now() });
+  
+  // Truncar texto largo (máx 200 caracteres por mensaje)
+  const truncated = text.length > 200 ? text.substring(0, 200) + '...' : text;
+  
+  history.push({ role, text: truncated, timestamp: Date.now() });
+  
   if (history.length > MAX_MEMORY) {
     history = history.slice(-MAX_MEMORY);
   }
+  
   conversationMemory.set(cleanNum, history);
 }
 
@@ -301,6 +307,12 @@ Pregunta: ${message}`;
 });
 
 
+// Endpoint temporal para limpiar memoria
+app.get('/clear-memory', (req, res) => {
+  conversationMemory.clear();
+  res.json({ message: 'Memoria limpiada' });
+});
+
 // ============================================
 // WEBHOOK DE WHATSAPP (CORREGIDO)
 // ============================================
@@ -312,7 +324,7 @@ app.post('/webhook', async (req, res) => {
   try {
     // Memoria de conversaciones (número → array de mensajes)
     const conversationMemory = new Map();
-    const MAX_MEMORY = 10; // últimos 10 mensajes por conversación
+    const MAX_MEMORY = 4; // Solo últimos 2 intercambios (user + assistant)
     const mensaje = req.body.data?.message?.conversation;
     const numero = req.body.data?.key?.remoteJid;
     const nombre = req.body.data?.pushName || 'amigo'; 
@@ -422,6 +434,11 @@ Pregunta actual de ${nombre}: ${mensaje}`;
   }
 });
 
+// Endpoint temporal para limpiar memoria
+app.get('/clear-memory', (req, res) => {
+  conversationMemory.clear();
+  res.json({ message: 'Memoria limpiada' });
+});
 
 // ============================================
 // INICIAR SERVIDOR
