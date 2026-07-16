@@ -179,10 +179,8 @@ async function sendTypingIndicator(number, durationMs = 2000) {
       },
       body: JSON.stringify({
         number: cleanNum,
-        options: {
-          delay: durationMs,
-          presence: 'composing'
-        }
+        delay: durationMs,
+        presence: 'composing'
       })
     });
 
@@ -217,10 +215,8 @@ async function stopTypingIndicator(number) {
       },
       body: JSON.stringify({
         number: cleanNum,
-        options: {
-          delay: 0,
-          presence: 'available'
-        }
+        delay: 0,
+        presence: 'available'
       })
     });
 
