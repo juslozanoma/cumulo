@@ -272,15 +272,16 @@ Pregunta: ${mensaje}`;
 
 const PORT = process.env.PORT || 10000;
 
-// Primero inicializamos la base de conocimiento, luego arrancamos el servidor
+// ESCUCHAR PUERTO INMEDIATAMENTE (Render necesita esto)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Cúmulo corriendo en puerto ${PORT}`);
+  console.log(`📱 WhatsApp webhook: POST /webhook`);
+  console.log(`💬 Chat API: POST /api/chat`);
+});
+
+// Cargar embeddings en segundo plano (no bloquea el servidor)
 initKnowledgeBase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Cúmulo corriendo en puerto ${PORT}`);
-    console.log(`📱 WhatsApp webhook: POST /webhook`);
-    console.log(`💬 Chat API: POST /api/chat`);
-    console.log(`🌐 Frontend: http://localhost:${PORT}`);
-  });
+  console.log('✅ Base de conocimiento lista');
 }).catch(err => {
-  console.error('❌ Error al inicializar:', err);
-  process.exit(1);
+  console.error('❌ Error al cargar embeddings:', err);
 });
