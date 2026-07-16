@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-12T02:49:42.928810",
-  "total_documents": 114,
-  "total_chunks": 347,
-  "total_tokens": 307336,
+  "generated_at": "2026-07-15T23:38:46.032813",
+  "total_documents": 111,
+  "total_chunks": 343,
+  "total_tokens": 302685,
   "counts": {
     "by_type": {
       "acta": 37,
@@ -10,11 +10,11 @@
       "proyecto": 11,
       "carta": 9,
       "relatoria": 15,
-      "otro": 7,
+      "otro": 5,
       "formato": 1,
       "cronograma": 1,
       "idea": 3,
-      "informe": 2,
+      "informe": 1,
       "manual": 11,
       "protocolo": 2,
       "reglamento": 3
@@ -22,7 +22,7 @@
     "by_committee": {
       "protocolos": 4,
       "charlas": 9,
-      "astrolectura": 17,
+      "astrolectura": 16,
       "astroescritura": 7,
       "cumulo nacional": 5,
       "astrochaza": 13,
@@ -30,7 +30,7 @@
       "representacion": 6,
       "etica": 3,
       "observatorio": 19,
-      "inventario": 10,
+      "inventario": 8,
       "vip": 3,
       "cumulo bogota": 6,
       "universidad": 7
@@ -51,7 +51,7 @@
       "2024-2": 6
     },
     "by_status": {
-      "desconocido": 62,
+      "desconocido": 59,
       "propuesta": 33,
       "vigente": 12,
       "borrador": 4,
@@ -64,8 +64,8 @@
       "certificados": 4,
       "cronogramas_previos": 1,
       "ideas_comites": 3,
-      "manuales_comites": 16,
-      "manuales_cumulo": 13,
+      "manuales_comites": 14,
+      "manuales_cumulo": 12,
       "relatorias_generales": 14
     }
   },
@@ -235,7 +235,7 @@
       "earliest": "2023-11-16",
       "latest": "2026-06-26"
     },
-    "without_date": 41
+    "without_date": 38
   },
   "keywords": {
     "top_30": [
@@ -262,27 +262,27 @@
       "hacer",
       "propuesta",
       "talleres",
-      "taller",
       "juancho",
       "miembros",
       "felipe",
       "nacional",
+      "taller",
       "universidad",
       "proyecto"
     ]
   },
   "rankings": {
     "most_tasks": [
-      "IDEA-PROTOC-2024-103",
+      "IDEA-PROTOC-2024-100",
       "ACTA-REPRES-2025-019",
-      "RELA-REPRES-2026-111",
+      "RELA-REPRES-2026-108",
       "ACTA-REPRES-2025-012",
-      "REGL-ASTROL-0000-100",
+      "REGL-ASTROL-0000-097",
       "ACTA-ASTROE-2025-014",
       "ACTA-ASTROC-2026-018",
       "MANU-CUMULO-2024-080",
-      "MANU-OBSERV-0000-094",
-      "ACTA-ASTROL-2025-108"
+      "MANU-OBSERV-0000-091",
+      "ACTA-ASTROL-2025-105"
     ]
   },
   "documents": [
@@ -368,38 +368,35 @@
     "MANU-UNIVER-2026-081",
     "MANU-UNIVER-2026-082",
     "MANU-OBSERV-0000-083",
-    "INFO-INVENT-0000-084",
-    "ACTA-INVENT-0000-085",
-    "PROT-INVENT-0000-086",
-    "REGL-UNIVER-0000-087",
-    "OTRO-ASTROL-0000-088",
-    "REGL-ASTROL-0000-089",
-    "RELA-VIP-2025-090",
-    "OTRO-INVENT-0000-091",
-    "MANU-UNIVER-2026-092",
-    "MANU-ETICA-0000-093",
-    "MANU-OBSERV-0000-094",
-    "MANU-CUMULO-0000-095",
-    "PROY-OBSERV-0000-096",
-    "PROY-CHARLA-0000-097",
-    "PROT-PROTOC-0000-098",
-    "PROY-ASTROC-0000-099",
-    "REGL-ASTROL-0000-100",
-    "ACTA-CHARLA-0000-101",
-    "PROY-UNIVER-2023-102",
-    "IDEA-PROTOC-2024-103",
-    "ACTA-ASTROC-2024-104",
-    "RELA-CHARLA-2025-105",
-    "OTRO-ETICA-2025-106",
-    "PROY-ASTROL-2025-107",
-    "ACTA-ASTROL-2025-108",
-    "RELA-REPRES-2025-109",
-    "RELA-REPRES-2026-110",
-    "RELA-REPRES-2026-111",
-    "RELA-OBSERV-2026-112",
-    "RELA-ASTROL-2026-113",
-    "RELA-CHARLA-2026-114",
-    "RELA-ASTROL-2026-115"
+    "ACTA-INVENT-0000-084",
+    "PROT-INVENT-0000-085",
+    "REGL-UNIVER-0000-086",
+    "REGL-ASTROL-0000-087",
+    "RELA-VIP-2025-088",
+    "MANU-UNIVER-2026-089",
+    "MANU-ETICA-0000-090",
+    "MANU-OBSERV-0000-091",
+    "MANU-CUMULO-0000-092",
+    "PROY-OBSERV-0000-093",
+    "PROY-CHARLA-0000-094",
+    "PROT-PROTOC-0000-095",
+    "PROY-ASTROC-0000-096",
+    "REGL-ASTROL-0000-097",
+    "ACTA-CHARLA-0000-098",
+    "PROY-UNIVER-2023-099",
+    "IDEA-PROTOC-2024-100",
+    "ACTA-ASTROC-2024-101",
+    "RELA-CHARLA-2025-102",
+    "OTRO-ETICA-2025-103",
+    "PROY-ASTROL-2025-104",
+    "ACTA-ASTROL-2025-105",
+    "RELA-REPRES-2025-106",
+    "RELA-REPRES-2026-107",
+    "RELA-REPRES-2026-108",
+    "RELA-OBSERV-2026-109",
+    "RELA-ASTROL-2026-110",
+    "RELA-CHARLA-2026-111",
+    "RELA-ASTROL-2026-112"
   ],
   "chats": {
     "total_chat_documents": 0,
