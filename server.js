@@ -270,7 +270,7 @@ Pregunta: ${mensaje}`;
 // INICIAR SERVIDOR
 // ============================================
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Primero inicializamos la base de conocimiento, luego arrancamos el servidor
 initKnowledgeBase().then(() => {
