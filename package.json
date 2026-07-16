@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "whatsapp": "node server.js"
+    "whatsapp": "node server.js",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
