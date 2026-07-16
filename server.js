@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 // ============================================
-// CONFIGURACIÓN
+// CONFIGURACION
 // ============================================
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -24,20 +24,17 @@ const INSTANCE_NAME = 'whatsapp-cumulo2';
 // FUNCIONES PARA SIMILITUD DE COSENO
 // ============================================
 
-// Calcular similitud de coseno entre dos vectores
-// Esto mide qué tan "cerca" están dos embeddings en el espacio numérico
-// Valor 1 = idénticos, 0 = completamente diferentes
 function cosineSimilarity(a, b) {
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
-  
+
   for (let i = 0; i < a.length; i++) {
     dotProduct += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
   }
-  
+
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
@@ -45,13 +42,11 @@ function cosineSimilarity(a, b) {
 // DIVIDIR TEXTO EN CHUNKS
 // ============================================
 
-// Toma el texto largo y lo corta en pedazos más pequeños
-// Cada chunk tiene máximo 2000 caracteres para no ser muy grande
 function chunkText(text, maxLength = 2000) {
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   const chunks = [];
   let currentChunk = '';
-  
+
   for (const sentence of sentences) {
     if ((currentChunk + sentence).length > maxLength) {
       chunks.push(currentChunk.trim());
@@ -61,7 +56,7 @@ function chunkText(text, maxLength = 2000) {
     }
   }
   if (currentChunk.trim()) chunks.push(currentChunk.trim());
-  
+
   return chunks;
 }
 
@@ -69,8 +64,6 @@ function chunkText(text, maxLength = 2000) {
 // GENERAR EMBEDDING CON GEMINI
 // ============================================
 
-// Convierte un texto en un vector numérico (lista de ~768 números)
-// Este vector captura el "significado" del texto
 async function getEmbedding(text) {
   const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
   const result = await model.embedContent(text);
@@ -81,13 +74,12 @@ async function getEmbedding(text) {
 // CARGAR O CREAR EMBEDDINGS
 // ============================================
 
-let chunks = [];        // Los textos originales divididos
-let embeddings = [];    // Los vectores numéricos de cada texto
+let chunks = [];
+let embeddings = [];
 
 async function initKnowledgeBase() {
   console.log('📚 Inicializando base de conocimiento...');
-  
-  // Si ya existe embeddings.json, lo cargamos (más rápido)
+
   if (fs.existsSync('./embeddings.json')) {
     console.log('✅ Cargando embeddings existentes...');
     const data = JSON.parse(fs.readFileSync('./embeddings.json', 'utf8'));
@@ -96,29 +88,23 @@ async function initKnowledgeBase() {
     console.log(`✅ ${chunks.length} chunks cargados desde archivo`);
     return;
   }
-  
-  // Si no existe, generamos todo desde cero
+
   console.log('🔄 Generando embeddings por primera vez...');
-  console.log('⏳ Esto puede tardar varios minutos dependiendo del tamaño de kb.json...');
-  
-  // Leer kb.json
+  console.log('⏳ Esto puede tardar varios minutos dependiendo del tamano de kb.json...');
+
   const kb = JSON.parse(fs.readFileSync('./public/kb.json', 'utf8'));
   const fullText = typeof kb === 'string' ? kb : JSON.stringify(kb, null, 2);
-  
-  // Dividir en chunks de ~2000 caracteres
+
   chunks = chunkText(fullText, 2000);
   console.log(`📄 ${chunks.length} chunks generados de kb.json`);
-  
-  // Generar embedding para cada chunk usando Gemini
-  // Con pausas para no exceder la cuota gratuita
+
   embeddings = [];
   for (let i = 0; i < chunks.length; i++) {
     try {
       const embedding = await getEmbedding(chunks[i]);
       embeddings.push(embedding);
       console.log(`✅ Chunk ${i + 1}/${chunks.length} procesado`);
-      
-      // Esperar 4 segundos entre cada chunk (15 por minuto = 1 cada 4 seg)
+
       if (i < chunks.length - 1) {
         console.log(`⏳ Esperando 4 segundos...`);
         await new Promise(resolve => setTimeout(resolve, 4000));
@@ -127,46 +113,146 @@ async function initKnowledgeBase() {
       if (error.message.includes('429')) {
         console.log(`⏳ Cuota excedida. Esperando 60 segundos...`);
         await new Promise(resolve => setTimeout(resolve, 60000));
-        i--; // Reintentar este chunk
+        i--;
       } else {
         throw error;
       }
     }
   }
-    
-  // Guardar en archivo para no repetir en el futuro
+
   fs.writeFileSync('./embeddings.json', JSON.stringify({ chunks, embeddings }));
   console.log('🎉 Embeddings guardados en embeddings.json');
-  console.log('💡 La próxima vez se cargarán automáticamente desde el archivo');
+  console.log('💡 La proxima vez se cargaran automaticamente desde el archivo');
 }
 
 // ============================================
 // BUSCAR CHUNKS RELEVANTES
 // ============================================
 
-// Cuando llega una pregunta:
-// 1. Convertimos la pregunta a embedding
-// 2. Comparamos con todos los embeddings guardados
-// 3. Devolvemos los 3 textos más similares
 async function searchRelevantChunks(query, nResults = 3) {
   const queryEmbedding = await getEmbedding(query);
-  
-  // Calcular similitud con cada chunk guardado
+
   const similarities = embeddings.map((emb, i) => ({
     index: i,
     similarity: cosineSimilarity(queryEmbedding, emb)
   }));
-  
-  // Ordenar de mayor a menor similitud
+
   similarities.sort((a, b) => b.similarity - a.similarity);
-  
-  // Tomar los top N
+
   const topResults = similarities.slice(0, nResults);
-  
+
   console.log(`🔍 Similitudes: ${topResults.map(r => r.similarity.toFixed(3)).join(', ')}`);
-  
+
   return topResults.map(r => chunks[r.index]);
 }
+
+// ============================================
+// ═══════════════════════════════════════════
+// NUEVAS FUNCIONES: "ESCRIBIENDO..."
+// ═══════════════════════════════════════════
+// ============================================
+
+
+/**
+ * Limpia el numero de WhatsApp quitando sufijos
+ */
+function cleanNumber(number) {
+  return number.replace(/@s\.whatsapp\.net|@g\.us|@lid/g, '');
+}
+
+
+/**
+ * Activa el indicador de "Escribiendo..." en WhatsApp
+ * @param {string} number - Numero del destinatario
+ * @param {number} durationMs - Duracion en ms
+ * @returns {Promise<boolean>}
+ */
+async function sendTypingIndicator(number, durationMs = 2000) {
+  try {
+    const cleanNum = cleanNumber(number);
+
+    const response = await fetch(`${EVOLUTION_URL}/chat/sendPresence/${INSTANCE_NAME}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': EVOLUTION_API_KEY
+      },
+      body: JSON.stringify({
+        number: cleanNum,
+        options: {
+          delay: durationMs,
+          presence: 'composing'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`⚠️ sendPresence fallo: ${response.status} - ${errorText}`);
+      return false;
+    }
+
+    console.log(`✅ "Escribiendo..." activado para ${cleanNum} (${durationMs}ms)`);
+    return true;
+
+  } catch (err) {
+    console.log(`⚠️ Error en sendTypingIndicator: ${err.message}`);
+    return false;
+  }
+}
+
+
+/**
+ * Desactiva el indicador de "Escribiendo..."
+ */
+async function stopTypingIndicator(number) {
+  try {
+    const cleanNum = cleanNumber(number);
+
+    await fetch(`${EVOLUTION_URL}/chat/sendPresence/${INSTANCE_NAME}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': EVOLUTION_API_KEY
+      },
+      body: JSON.stringify({
+        number: cleanNum,
+        options: {
+          delay: 0,
+          presence: 'available'
+        }
+      })
+    });
+
+  } catch (err) {
+    // Silencioso - no es critico
+  }
+}
+
+
+/**
+ * Calcula tiempo de escritura realista con VARIABILIDAD ALEATORIA
+ */
+function calculateTypingDuration(text) {
+  // 40-70ms por caracter (aleatorio cada vez)
+  const msPerChar = 40 + Math.random() * 30;
+
+  let duration = text.length * msPerChar;
+
+  // Tiempo de "pensamiento" antes de escribir (0.5-2 segundos)
+  const thinkingTime = 500 + Math.random() * 1500;
+  duration += thinkingTime;
+
+  // Pausas por puntuacion (200-500ms cada coma/punto)
+  const punctuationPauses = (text.match(/[,.]/g) || []).length * (200 + Math.random() * 300);
+  duration += punctuationPauses;
+
+  // Minimo 1.5s, maximo 8s
+  duration = Math.max(1500, Math.min(duration, 8000));
+
+  return Math.round(duration);
+}
+
 
 // ============================================
 // API PARA EL FRONTEND REACT
@@ -175,17 +261,15 @@ async function searchRelevantChunks(query, nResults = 3) {
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
-    
-    // Buscar solo los chunks relevantes (no todo kb.json)
+
     const relevantChunks = await searchRelevantChunks(message, 3);
     const context = relevantChunks.join('\n\n');
-    
+
     console.log(`\n💬 Pregunta: ${message}`);
-    console.log(`📄 Contexto usado: ${context.length} caracteres (de ${JSON.stringify(fs.readFileSync('./public/kb.json', 'utf8')).length} totales)`);
-    
-    // Enviar a Gemini solo el contexto relevante + la pregunta
+    console.log(`📄 Contexto usado: ${context.length} caracteres`);
+
     const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-    const prompt = `Usa SOLO esta información para responder. Si no sabes, di "No tengo esa información en mi base de conocimiento":
+    const prompt = `Usa SOLO esta informacion para responder. Si no sabes, di "No tengo esa informacion en mi base de conocimiento":
 
 ${context}
 
@@ -201,20 +285,24 @@ Pregunta: ${message}`;
   }
 });
 
+
 // ============================================
-// WEBHOOK DE WHATSAPP
+// WEBHOOK DE WHATSAPP (CORREGIDO)
 // ============================================
 
 app.post('/webhook', async (req, res) => {
+  // Responder INMEDIATAMENTE a Evolution (importante!)
+  res.sendStatus(200);
+
   try {
     const mensaje = req.body.data?.message?.conversation;
     const numero = req.body.data?.key?.remoteJid;
 
-    // Ignorar mensajes enviados por mí mismo
-    if (req.body.data?.key?.fromMe) return res.sendStatus(200);
-    if (!mensaje) return res.sendStatus(200);
+    // Ignorar mensajes enviados por mi mismo
+    if (req.body.data?.key?.fromMe) return;
+    if (!mensaje) return;
 
-    // Detectar si es grupo (termina en @g.us) o privado (@s.whatsapp.net)
+    // Detectar si es grupo o privado
     const esGrupo = numero.endsWith('@g.us');
 
     // Solo requerir @157656052420857 en grupos
@@ -222,24 +310,22 @@ app.post('/webhook', async (req, res) => {
     let pregunta = mensaje.trim();
 
     if (esGrupo) {
-      // En grupos: solo responder si empieza con @157656052420857
       if (!pregunta.toLowerCase().startsWith(trigger)) {
         console.log(`⏩ Ignorado en grupo (no tiene ${trigger}): ${pregunta.substring(0, 50)}...`);
-        return res.sendStatus(200);
+        return;
       }
-      // Quitar el trigger del mensaje
       pregunta = pregunta.slice(trigger.length).trim();
     }
 
-    console.log(`📩 ${esGrupo ? 'Grupo' : 'Privado'} - Pregunta: ${pregunta}`);
+    console.log(`\n📩 ${esGrupo ? 'Grupo' : 'Privado'} - Pregunta: ${pregunta}`);
 
-    // Buscar chunks relevantes
+    // ===== PASO 1: BUSCAR CHUNKS =====
     const relevantChunks = await searchRelevantChunks(mensaje, 3);
     const context = relevantChunks.join('\n\n');
 
-    // Consultar Gemini con solo el contexto relevante
+    // ===== PASO 2: CONSULTAR GEMINI =====
     const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-    const prompt = `Usa SOLO esta información para responder. Si no sabes, di "No tengo esa información":
+    const prompt = `Usa SOLO esta informacion para responder. Si no sabes, di "No tengo esa informacion":
 
 ${context}
 
@@ -248,66 +334,57 @@ Pregunta: ${mensaje}`;
     const result = await model.generateContent(prompt);
     const respuesta = result.response.text();
 
-    console.log(`🤖 Respuesta: ${respuesta}`);
+    console.log(`🤖 Respuesta (${respuesta.length} chars): ${respuesta.substring(0, 100)}...`);
 
-    // Mostrar "escribiendo..."
-    try {
-      const presenceResponse = await fetch(`${EVOLUTION_URL}/chat/presence/${INSTANCE_NAME}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': EVOLUTION_API_KEY
-        },
-        body: JSON.stringify({
-          number: numero.replace('@s.whatsapp.net', ''),
-          presence: 'composing'
-        })
-      });
-      
-      if (!presenceResponse.ok) {
-        console.log(`⚠️ Presence falló: ${presenceResponse.status} ${presenceResponse.statusText}`);
-      } else {
-        console.log(`✅ Mostrando "Escribiendo..."`);
-      }
-    } catch (err) {
-      console.log(`⚠️ Error en presence: ${err.message}`);
+    // ===== PASO 3: CALCULAR TIEMPO REALISTA =====
+    const typingDuration = calculateTypingDuration(respuesta);
+    console.log(`⏱️ Tiempo de escritura simulado: ${typingDuration}ms`);
+
+    // ===== PASO 4: MOSTRAR "ESCRIBIENDO..." =====
+    // Enviar ANTES de esperar, para que WhatsApp lo muestre inmediatamente
+    const typingOk = await sendTypingIndicator(numero, typingDuration);
+
+    if (typingOk) {
+      // Esperar el tiempo calculado
+      await new Promise(resolve => setTimeout(resolve, typingDuration));
+
+      // Desactivar antes de enviar
+      await stopTypingIndicator(numero);
+    } else {
+      // Si fallo, esperar tiempo minimo
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    // Esperar 2 segundos simulando que escribe
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // ===== PASO 5: ENVIAR RESPUESTA =====
+    const cleanNum = cleanNumber(numero);
 
-    // Enviar respuesta de vuelta por WhatsApp
-    await fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
+    const sendResponse = await fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': EVOLUTION_API_KEY
       },
       body: JSON.stringify({
-        number: numero.replace('@s.whatsapp.net', ''),
-        text: respuesta
+        number: cleanNum,
+        text: respuesta,
+        options: {
+          delay: 0
+        }
       })
     });
 
-    console.log(`✅ Enviado a ${numero}`);
-    res.sendStatus(200);
+    if (!sendResponse.ok) {
+      const errorText = await sendResponse.text();
+      console.log(`❌ Error al enviar mensaje: ${sendResponse.status} - ${errorText}`);
+    } else {
+      console.log(`✅ Enviado a ${numero}`);
+    }
+
   } catch (error) {
     console.error('❌ Error webhook:', error);
-    res.sendStatus(500);
   }
 });
 
-// ============================================
-// SERVIR REACT EN PRODUCCIÓN
-// ============================================
-
-// if (process.env.NODE_ENV === 'production') {
-//   app.use(express.static('dist'));
-  
-//   app.get('*', (req, res) => {
-//     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-//   });
-// }
 
 // ============================================
 // INICIAR SERVIDOR
@@ -315,14 +392,14 @@ Pregunta: ${mensaje}`;
 
 const PORT = process.env.PORT || 10000;
 
-// ESCUCHAR PUERTO INMEDIATAMENTE (Render necesita esto)
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Cúmulo corriendo en puerto ${PORT}`);
+  console.log(`🚀 Cumulo corriendo en puerto ${PORT}`);
   console.log(`📱 WhatsApp webhook: POST /webhook`);
   console.log(`💬 Chat API: POST /api/chat`);
+  console.log(`✍️ Typing indicator: ACTIVADO con variabilidad aleatoria`);
 });
 
-// Cargar embeddings en segundo plano (no bloquea el servidor)
+// Cargar embeddings en segundo plano
 initKnowledgeBase().then(() => {
   console.log('✅ Base de conocimiento lista');
 }).catch(err => {
