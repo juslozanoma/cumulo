@@ -263,7 +263,7 @@ function calculateTypingDuration(text) {
   duration += punctuationPauses;
 
   // Minimo 1.5s, maximo 8s
-  duration = Math.max(1500, Math.min(duration, 8000));
+  duration = Math.max(1500, Math.min(duration, 4000));
 
   return Math.round(duration);
 }
