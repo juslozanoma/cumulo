@@ -20,6 +20,25 @@ const EVOLUTION_URL = 'https://evolution-api-5q3w.onrender.com';
 const EVOLUTION_API_KEY = 'cumulo2308';
 const INSTANCE_NAME = 'whatsapp-cumulo2';
 
+// Memoria de conversaciones
+const conversationMemory = new Map();
+const MAX_MEMORY = 10;
+
+function getConversationHistory(number) {
+  const cleanNum = cleanNumber(number);
+  return conversationMemory.get(cleanNum) || [];
+}
+
+function addToHistory(number, role, text) {
+  const cleanNum = cleanNumber(number);
+  let history = conversationMemory.get(cleanNum) || [];
+  history.push({ role, text, timestamp: Date.now() });
+  if (history.length > MAX_MEMORY) {
+    history = history.slice(-MAX_MEMORY);
+  }
+  conversationMemory.set(cleanNum, history);
+}
+
 // ============================================
 // FUNCIONES PARA SIMILITUD DE COSENO
 // ============================================
@@ -291,8 +310,12 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 
   try {
+    // Memoria de conversaciones (número → array de mensajes)
+    const conversationMemory = new Map();
+    const MAX_MEMORY = 10; // últimos 10 mensajes por conversación
     const mensaje = req.body.data?.message?.conversation;
     const numero = req.body.data?.key?.remoteJid;
+    const nombre = req.body.data?.pushName || 'amigo'; 
 
     // Ignorar mensajes enviados por mi mismo
     if (req.body.data?.key?.fromMe) return;
@@ -320,17 +343,35 @@ app.post('/webhook', async (req, res) => {
     const context = relevantChunks.join('\n\n');
 
     // ===== PASO 2: CONSULTAR GEMINI =====
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-    const prompt = `Usa SOLO esta informacion para responder. Si no sabes, di "No tengo esa informacion":
+        // Guardar mensaje del usuario en historial
+    addToHistory(numero, 'user', mensaje);
 
+    // Obtener historial de conversación
+    const history = getConversationHistory(numero);
+    const historyText = history.map(h =>
+      h.role === 'user' ? `${nombre}: ${h.text}` : `Cúmulo: ${h.text}`
+    ).join('\n');
+
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+    const prompt = `Eres Cúmulo, un asistente amigable y cercano. Hablas con ${nombre}. Usa su nombre naturalmente en las respuestas. Sé conversacional, como un amigo experto.
+
+Historial de la conversación:
+${historyText}
+
+Información de la base de conocimiento:
 ${context}
 
-Pregunta: ${mensaje}`;
+Responde de forma amigable y personalizada para ${nombre}. Si no sabes algo, di que no tienes esa información por ahora.
+
+Pregunta actual de ${nombre}: ${mensaje}`;
 
     const result = await model.generateContent(prompt);
     const respuesta = result.response.text();
 
-    console.log(`🤖 Respuesta (${respuesta.length} chars): ${respuesta.substring(0, 100)}...`);
+    // Guardar respuesta en historial
+    addToHistory(numero, 'assistant', respuesta);
+
+    console.log(`🤖 Respuesta: ${respuesta}`);
 
     // ===== PASO 3: CALCULAR TIEMPO REALISTA =====
     const typingDuration = calculateTypingDuration(respuesta);
